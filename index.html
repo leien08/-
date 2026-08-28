@@ -22,9 +22,43 @@
     .success { background: #d4edda; color: #155724; }
     .error { background: #f8d7da; color: #721c24; }
     .config-sec { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+
+    /* 頂部列與登入按鈕 */
+    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .top-bar h1 { font-size: 1.3em; color: #333; margin: 0; }
+    .btn-login {
+      background: #007bff; color: white; border: none; padding: 8px 16px;
+      border-radius: 4px; cursor: pointer; font-size: 0.9em;
+    }
+    .btn-login:hover { background: #0056b3; }
+    .btn-login.is-logged-in { background: #6c757d; }
+    .btn-login.is-logged-in:hover { background: #565e64; }
+
+    /* 登入彈窗 */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      background: white; padding: 24px; border-radius: 8px; width: 90%; max-width: 320px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .modal-box h3 { margin-top: 0; }
+    .modal-box input[type="password"] { margin-bottom: 12px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .modal-actions button { flex: 1; }
+    .btn-cancel { background: #6c757d; }
+    .btn-cancel:hover { background: #565e64; }
+    .modal-error { color: #721c24; font-size: 0.9em; margin: -6px 0 10px; display: none; }
   </style>
 </head>
 <body>
+
+  <div class="top-bar">
+    <h1>🏠 套房電費管理系統</h1>
+    <button type="button" id="loginBtn" class="btn-login" onclick="handleLoginButtonClick()">🔐 登入</button>
+  </div>
 
   <!-- 前台展示 -->
   <div class="card">
@@ -50,8 +84,8 @@
     </table>
   </div>
 
-  <!-- 後台與設定 -->
-  <div class="card">
+  <!-- 後台與設定：預設隱藏，登入後才顯示 -->
+  <div class="card" id="adminCard" style="display:none;">
     <h2>⚙️ 後台 - 抄表與 API 儲存</h2>
     
     <!-- GitHub API 連線設定 -->
@@ -97,7 +131,79 @@
     </form>
   </div>
 
+  <!-- 登入彈窗 -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-box">
+      <h3>🔐 管理員登入</h3>
+      <p class="modal-error" id="loginError">密碼錯誤，請再試一次。</p>
+      <input type="password" id="loginPasswordInput" placeholder="請輸入管理密碼" autocomplete="off">
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeLoginModal()">取消</button>
+        <button type="button" onclick="attemptLogin()">登入</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // 管理密碼：僅用於避免一般訪客誤入後台介面，不是真正的安全機制。
+    // 真正的寫入權限仍取決於是否填寫了正確的 GitHub Personal Access Token。
+    // 請自行修改成你自己的密碼。
+    const ADMIN_PASSWORD = 'itri18899';
+
+    function isAdminSession() {
+      return sessionStorage.getItem('isAdminLoggedIn') === '1';
+    }
+
+    function showAdminCard() {
+      document.getElementById('adminCard').style.display = 'block';
+      const btn = document.getElementById('loginBtn');
+      btn.textContent = '🔓 登出後台';
+      btn.classList.add('is-logged-in');
+      btn.onclick = handleLogout;
+    }
+
+    function hideAdminCard() {
+      document.getElementById('adminCard').style.display = 'none';
+      const btn = document.getElementById('loginBtn');
+      btn.textContent = '🔐 登入';
+      btn.classList.remove('is-logged-in');
+      btn.onclick = handleLoginButtonClick;
+    }
+
+    function handleLoginButtonClick() {
+      document.getElementById('loginPasswordInput').value = '';
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('loginModal').classList.add('show');
+      document.getElementById('loginPasswordInput').focus();
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.remove('show');
+    }
+
+    function attemptLogin() {
+      const input = document.getElementById('loginPasswordInput').value;
+      if (input === ADMIN_PASSWORD) {
+        sessionStorage.setItem('isAdminLoggedIn', '1');
+        closeLoginModal();
+        showAdminCard();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('isAdminLoggedIn');
+      hideAdminCard();
+    }
+
+    // 讓輸入密碼後按 Enter 直接送出
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('loginPasswordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') attemptLogin();
+      });
+    });
+
     let currentData = null;
     let fileSha = ""; // GitHub 修改檔案時必須帶上的 SHA 驗證碼
 
@@ -127,8 +233,14 @@
       document.getElementById('cfgBranch').value = localStorage.getItem('gh_branch') || 'main';
       document.getElementById('cfgToken').value = localStorage.getItem('gh_token') || '';
 
+      // 前台統計對所有訪客開放，不需要登入即可載入顯示
       if (localStorage.getItem('gh_owner') && localStorage.getItem('gh_token')) {
         loadDataFromGitHub();
+      }
+
+      // 若此瀏覽器分頁先前已登入過後台，重新整理後維持登入狀態
+      if (isAdminSession()) {
+        showAdminCard();
       }
     };
 
