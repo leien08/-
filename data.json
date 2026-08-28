@@ -3,7 +3,7 @@
   "meterReadingDate": "",
   "unitPrice": 5.0,
   "mainMeter": { "previous": 10000, "current": 11200 },
-  "water": { "totalAmount": 0, "peopleCount": 1 },
+  "water": { "readingDate": "", "totalAmount": 0, "peopleCount": 1 },
   "rooms": [
     { "id": "1-1", "name": "1-1", "previous": 1000, "current": 1150 },
     { "id": "2-1", "name": "2-1", "previous": 1500, "current": 1720 },

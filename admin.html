@@ -33,11 +33,14 @@
   <div class="card" id="adminCard" style="display:none;">
     <div class="top-bar">
       <h2 style="border:none; padding:0;">⚙️ 後台 - 抄表與 API 儲存</h2>
-      <button type="button" class="btn-cancel" style="flex:none;" onclick="handleLogout()">登出</button>
+      <div class="top-bar-actions">
+        <button type="button" class="btn-link" id="securityToggleBtn" onclick="toggleSecuritySection()">🔑 帳號與安全設定</button>
+        <button type="button" class="btn-cancel" style="flex:none;" onclick="handleLogout()">登出</button>
+      </div>
     </div>
 
-    <!-- 帳號與安全設定：改密碼、管理 PAT -->
-    <div class="security-sec">
+    <!-- 帳號與安全設定：改密碼、管理 PAT（預設隱藏，按上方按鈕才顯示） -->
+    <div class="security-sec" id="securitySection" style="display:none;">
       <h3 style="margin-top:0;">🔑 帳號與安全設定</h3>
 
       <p><strong>修改登入密碼</strong></p>
@@ -90,6 +93,7 @@
 
       <h3>💧 水費分攤設定</h3>
       <div class="grid">
+        <div><label>水費抄表日期：</label><input type="date" id="inputWaterDate"></div>
         <div><label>水費總金額：</label><input type="number" step="1" id="inputWaterTotal" placeholder="例如: 1200"></div>
         <div><label>分攤人數：</label><input type="number" step="1" min="1" id="inputWaterPeople" placeholder="例如: 6"></div>
       </div>
@@ -278,6 +282,13 @@
       btn.innerText = current === 'dark' ? '☀️ 淺色' : '🌙 深色';
     }
 
+    // ---------- 「帳號與安全設定」區塊：預設隱藏，按按鈕才展開/收合 ----------
+    function toggleSecuritySection() {
+      const sec = document.getElementById('securitySection');
+      const isHidden = sec.style.display === 'none';
+      sec.style.display = isHidden ? 'block' : 'none';
+    }
+
     // ---------- 樓層色彩分組：房號如 "1-1"、"2-5" 依樓層數字自動分色 ----------
     // 房號格式須為「樓層-戶號」（例如 1-1 ~ 1-10、2-1 ~ 2-10...），前面的數字視為樓層。
     // 色票共有 6 組，樓層數超過 6 會循環使用（例如 7 樓會沿用 1 樓的顏色）。
@@ -463,7 +474,8 @@
       document.getElementById('inputUnitPrice').value = currentData.unitPrice;
       document.getElementById('mainPrev').value = currentData.mainMeter.previous;
       document.getElementById('mainCurr').value = currentData.mainMeter.current;
-      const water = currentData.water || { totalAmount: 0, peopleCount: 1 };
+      const water = currentData.water || { totalAmount: 0, peopleCount: 1, readingDate: '' };
+      document.getElementById('inputWaterDate').value = water.readingDate || '';
       document.getElementById('inputWaterTotal').value = water.totalAmount;
       document.getElementById('inputWaterPeople').value = water.peopleCount;
       updateWaterPreview();
@@ -624,6 +636,7 @@
           current: parseFloat(document.getElementById('mainCurr').value) || 0
         },
         water: {
+          readingDate: document.getElementById('inputWaterDate').value || '',
           totalAmount: parseFloat(document.getElementById('inputWaterTotal').value) || 0,
           peopleCount: waterPeople
         },

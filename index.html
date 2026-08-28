@@ -27,6 +27,7 @@
   <div class="card">
     <h2>⚡ 前台 - 電費用量統計</h2>
     <p id="meterDateLine" class="field-note" style="display:none;">📅 抄表日期：<span id="displayMeterDate"></span></p>
+    <p id="waterDateLine" class="field-note" style="display:none;">💧 水費抄表日期：<span id="displayWaterDate"></span></p>
     <h3>總電表概況 (單價：<span id="displayUnitPrice">0</span> 元/度)</h3>
     <div class="grid">
       <div class="stat-box"><div>總使用度數</div><div class="stat-value"><span id="mainUsage">0</span> 度</div></div>
@@ -165,9 +166,13 @@
         document.getElementById('meterDateLine').style.display = 'block';
       }
 
-      const water = data.water || { totalAmount: 0, peopleCount: 1 };
+      const water = data.water || { totalAmount: 0, peopleCount: 1, readingDate: '' };
       const waterPerPerson = water.peopleCount > 0 ? water.totalAmount / water.peopleCount : 0;
       document.getElementById('waterPerPerson').innerText = waterPerPerson.toFixed(0);
+      if (water.readingDate) {
+        document.getElementById('displayWaterDate').innerText = water.readingDate;
+        document.getElementById('waterDateLine').style.display = 'block';
+      }
 
       renderFloorLegend('floorLegend', data.rooms);
 
