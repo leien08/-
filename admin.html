@@ -26,6 +26,34 @@
       <button type="button" class="btn-cancel" style="flex:none;" onclick="handleLogout()">登出</button>
     </div>
 
+    <!-- 帳號與安全設定：改密碼、管理 PAT -->
+    <div class="security-sec">
+      <h3 style="margin-top:0;">🔑 帳號與安全設定</h3>
+
+      <p><strong>修改登入密碼</strong></p>
+      <div class="grid">
+        <div><label>目前密碼：</label><input type="password" id="curPasswordInput" autocomplete="off"></div>
+        <div><label>新密碼：</label><input type="password" id="newPasswordInput" autocomplete="off"></div>
+        <div><label>確認新密碼：</label><input type="password" id="confirmPasswordInput" autocomplete="off"></div>
+      </div>
+      <div class="inline-actions">
+        <button type="button" onclick="changePassword()">🔒 更新密碼</button>
+      </div>
+      <div id="passwordMsg" class="status-msg"></div>
+      <p class="field-note">密碼只儲存在「這台裝置的這個瀏覽器」裡，換一台電腦或清除瀏覽器資料後會回復成預設密碼。</p>
+
+      <hr style="border:none; border-top:1px solid #dee2e6; margin:18px 0;">
+
+      <p><strong>GitHub Personal Access Token (PAT)</strong>　<span id="tokenStatusBadge"></span></p>
+      <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxxxx">
+      <div class="inline-actions">
+        <button type="button" onclick="updateToken()">💾 更新 Token</button>
+        <button type="button" class="btn-cancel" onclick="clearToken()">🗑 清除 Token</button>
+      </div>
+      <div id="tokenMsg" class="status-msg"></div>
+      <p class="field-note">Token 同樣只存在這台裝置的瀏覽器裡，不會被送到任何地方，只在呼叫 GitHub API 時使用。</p>
+    </div>
+
     <!-- GitHub API 連線設定 -->
     <div class="config-sec">
       <h3 style="margin-top:0;">🔗 GitHub 儲存庫同步設定</h3>
@@ -34,9 +62,7 @@
         <div><label>專案 (Repo):</label><input type="text" id="cfgRepo" placeholder="例如: electricity-system"></div>
         <div><label>分支 (Branch):</label><input type="text" id="cfgBranch" value="main"></div>
       </div>
-      <p style="margin-bottom:5px;"><label>Personal Access Token (PAT):</label></p>
-      <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxxxx">
-      <br><br>
+      <br>
       <button type="button" style="background:#17a2b8;" onclick="loadDataFromGitHub()">🔄 載入最新資料</button>
     </div>
 
@@ -86,11 +112,13 @@
   </div>
 
   <script>
-    // 管理密碼：僅用於避免一般訪客誤入後台介面，不是真正的安全機制 ——
-    // 這是純前端頁面，任何人「檢視原始碼」都看得到這個字串。
-    // 真正的寫入權限仍取決於是否填寫了正確的 GitHub Personal Access Token。
-    // 請自行修改成你自己的密碼再部署。
-    const ADMIN_PASSWORD = 'itri18899';
+    // 預設密碼：僅在此瀏覽器從未設定過密碼時作為第一次登入用的後備值。
+    // 登入後可在「帳號與安全設定」直接改成自己的密碼（會存在這台裝置的瀏覽器裡）。
+    const DEFAULT_ADMIN_PASSWORD = 'itri18899';
+
+    function getAdminPassword() {
+      return localStorage.getItem('admin_password') || DEFAULT_ADMIN_PASSWORD;
+    }
 
     let currentData = null;
     let workingRooms = [];   // 目前後台表格中，可新增/刪除的房號工作陣列
@@ -124,7 +152,7 @@
 
     function attemptLogin() {
       const input = document.getElementById('loginPasswordInput').value;
-      if (input === ADMIN_PASSWORD) {
+      if (input === getAdminPassword()) {
         sessionStorage.setItem('isAdminLoggedIn', '1');
         closeLoginModal();
         showAdminCard();
@@ -147,6 +175,7 @@
       document.getElementById('cfgRepo').value = localStorage.getItem('gh_repo') || '';
       document.getElementById('cfgBranch').value = localStorage.getItem('gh_branch') || 'main';
       document.getElementById('cfgToken').value = localStorage.getItem('gh_token') || '';
+      updateTokenStatusIndicator();
 
       if (isAdminSession()) {
         showAdminCard();
@@ -180,10 +209,69 @@
     }
 
     function showStatus(text, isError = false) {
-      const msg = document.getElementById('statusMsg');
+      showMsgIn('statusMsg', text, isError);
+    }
+
+    function showMsgIn(elId, text, isError = false) {
+      const msg = document.getElementById(elId);
       msg.innerText = text;
       msg.className = 'status-msg ' + (isError ? 'error' : 'success');
       msg.style.display = 'block';
+    }
+
+    function updateTokenStatusIndicator() {
+      const badge = document.getElementById('tokenStatusBadge');
+      const hasToken = !!localStorage.getItem('gh_token');
+      badge.innerText = hasToken ? '（目前已設定 Token）' : '（尚未設定 Token）';
+      badge.style.color = hasToken ? '#155724' : '#721c24';
+      badge.style.fontSize = '0.85em';
+      badge.style.fontWeight = 'normal';
+    }
+
+    // ---------- 修改登入密碼 ----------
+    function changePassword() {
+      const cur = document.getElementById('curPasswordInput').value;
+      const next = document.getElementById('newPasswordInput').value;
+      const confirmVal = document.getElementById('confirmPasswordInput').value;
+
+      if (cur !== getAdminPassword()) {
+        showMsgIn('passwordMsg', '目前密碼不正確。', true);
+        return;
+      }
+      if (!next || next.length < 4) {
+        showMsgIn('passwordMsg', '新密碼至少需要 4 個字元。', true);
+        return;
+      }
+      if (next !== confirmVal) {
+        showMsgIn('passwordMsg', '兩次輸入的新密碼不一致。', true);
+        return;
+      }
+
+      localStorage.setItem('admin_password', next);
+      document.getElementById('curPasswordInput').value = '';
+      document.getElementById('newPasswordInput').value = '';
+      document.getElementById('confirmPasswordInput').value = '';
+      showMsgIn('passwordMsg', '✅ 密碼已更新（僅此瀏覽器/裝置生效）。', false);
+    }
+
+    // ---------- 管理 GitHub PAT ----------
+    function updateToken() {
+      const token = document.getElementById('cfgToken').value.trim();
+      if (token) {
+        localStorage.setItem('gh_token', token);
+        showMsgIn('tokenMsg', '✅ Token 已更新並儲存在此瀏覽器。', false);
+      } else {
+        localStorage.removeItem('gh_token');
+        showMsgIn('tokenMsg', '⚠️ Token 欄位是空的，已清空儲存的 Token。', true);
+      }
+      updateTokenStatusIndicator();
+    }
+
+    function clearToken() {
+      document.getElementById('cfgToken').value = '';
+      localStorage.removeItem('gh_token');
+      showMsgIn('tokenMsg', '🗑 已清除此瀏覽器儲存的 Token。', false);
+      updateTokenStatusIndicator();
     }
 
     function saveConfig() {
@@ -191,6 +279,7 @@
       localStorage.setItem('gh_repo', document.getElementById('cfgRepo').value.trim());
       localStorage.setItem('gh_branch', document.getElementById('cfgBranch').value.trim());
       localStorage.setItem('gh_token', document.getElementById('cfgToken').value.trim());
+      updateTokenStatusIndicator();
     }
 
     // ---------- 從 GitHub API 取得 data.json ----------

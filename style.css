@@ -37,6 +37,11 @@ button:disabled { background: #6c757d; cursor: not-allowed; }
 .error { background: #f8d7da; color: #721c24; }
 
 .config-sec { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+.security-sec { background: #e7f1ff; border: 1px solid #b6d4fe; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+
+.inline-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.inline-actions button { flex: none; }
+.field-note { font-size: 0.8em; color: #6c757d; margin: 6px 0 0; }
 
 /* 房號管理（可新增/刪除列） */
 .btn-delete-room {
