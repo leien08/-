@@ -1,4 +1,5 @@
 {
+  "adminPasswordHash": "366296cfdac556b843dd9e1c759fcc1cf689ad9254f5b624a88ced8e3764bdb7",
   "unitPrice": 5.0,
   "mainMeter": { "previous": 10000, "current": 11200 },
   "rooms": [
