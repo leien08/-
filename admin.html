@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>套房電費管理系統｜後台</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="top-bar">
+    <h1>⚙️ 電費後台管理</h1>
+    <a class="btn-link" href="index.html">🏠 回前台</a>
+  </div>
+
+  <!-- 尚未登入時顯示 -->
+  <div class="card locked-state" id="lockedState">
+    <p>此頁面需要登入才能管理抄表資料。</p>
+    <button type="button" onclick="handleLoginButtonClick()">🔐 登入</button>
+  </div>
+
+  <!-- 後台與設定：登入後才顯示 -->
+  <div class="card" id="adminCard" style="display:none;">
+    <div class="top-bar">
+      <h2 style="border:none; padding:0;">⚙️ 後台 - 抄表與 API 儲存</h2>
+      <button type="button" class="btn-cancel" style="flex:none;" onclick="handleLogout()">登出</button>
+    </div>
+
+    <!-- GitHub API 連線設定 -->
+    <div class="config-sec">
+      <h3 style="margin-top:0;">🔗 GitHub 儲存庫同步設定</h3>
+      <div class="grid">
+        <div><label>帳號 (Owner):</label><input type="text" id="cfgOwner" placeholder="例如: your-username"></div>
+        <div><label>專案 (Repo):</label><input type="text" id="cfgRepo" placeholder="例如: electricity-system"></div>
+        <div><label>分支 (Branch):</label><input type="text" id="cfgBranch" value="main"></div>
+      </div>
+      <p style="margin-bottom:5px;"><label>Personal Access Token (PAT):</label></p>
+      <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxxxx">
+      <br><br>
+      <button type="button" style="background:#17a2b8;" onclick="loadDataFromGitHub()">🔄 載入最新資料</button>
+    </div>
+
+    <form id="meterForm" onsubmit="return false;">
+      <p>
+        <label><strong>台電標準單價 (元/度)：</strong></label>
+        <input type="number" step="0.1" id="inputUnitPrice" required>
+      </p>
+
+      <h3>總電表讀數</h3>
+      <div class="grid">
+        <div><label>上次度數：</label><input type="number" id="mainPrev" required></div>
+        <div><label>本次度數：</label><input type="number" id="mainCurr" required></div>
+      </div>
+
+      <h3>各分電表讀數</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>房號</th>
+            <th>上次度數</th>
+            <th>本次度數</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+      <button type="button" class="btn-add-room" onclick="addRoom()">＋ 新增房號</button>
+
+      <br><br>
+      <button type="button" id="saveBtn" onclick="saveDataToGitHub()">💾 儲存並 Commit 到 GitHub</button>
+      <div id="statusMsg" class="status-msg"></div>
+    </form>
+  </div>
+
+  <!-- 登入彈窗 -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-box">
+      <h3>🔐 管理員登入</h3>
+      <p class="modal-error" id="loginError">密碼錯誤，請再試一次。</p>
+      <input type="password" id="loginPasswordInput" placeholder="請輸入管理密碼" autocomplete="off">
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeLoginModal()">取消</button>
+        <button type="button" onclick="attemptLogin()">登入</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 管理密碼：僅用於避免一般訪客誤入後台介面，不是真正的安全機制 ——
+    // 這是純前端頁面，任何人「檢視原始碼」都看得到這個字串。
+    // 真正的寫入權限仍取決於是否填寫了正確的 GitHub Personal Access Token。
+    // 請自行修改成你自己的密碼再部署。
+    const ADMIN_PASSWORD = 'itri18899';
+
+    let currentData = null;
+    let workingRooms = [];   // 目前後台表格中，可新增/刪除的房號工作陣列
+    let fileSha = "";        // GitHub 修改檔案時必須帶上的 SHA 驗證碼
+
+    // ---------- 登入 / 登出 ----------
+    function isAdminSession() {
+      return sessionStorage.getItem('isAdminLoggedIn') === '1';
+    }
+
+    function showAdminCard() {
+      document.getElementById('lockedState').style.display = 'none';
+      document.getElementById('adminCard').style.display = 'block';
+    }
+
+    function hideAdminCard() {
+      document.getElementById('adminCard').style.display = 'none';
+      document.getElementById('lockedState').style.display = 'block';
+    }
+
+    function handleLoginButtonClick() {
+      document.getElementById('loginPasswordInput').value = '';
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('loginModal').classList.add('show');
+      document.getElementById('loginPasswordInput').focus();
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.remove('show');
+    }
+
+    function attemptLogin() {
+      const input = document.getElementById('loginPasswordInput').value;
+      if (input === ADMIN_PASSWORD) {
+        sessionStorage.setItem('isAdminLoggedIn', '1');
+        closeLoginModal();
+        showAdminCard();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('isAdminLoggedIn');
+      hideAdminCard();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('loginPasswordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') attemptLogin();
+      });
+      // 初始化：載入本地紀錄的 GitHub 連線設定
+      document.getElementById('cfgOwner').value = localStorage.getItem('gh_owner') || '';
+      document.getElementById('cfgRepo').value = localStorage.getItem('gh_repo') || '';
+      document.getElementById('cfgBranch').value = localStorage.getItem('gh_branch') || 'main';
+      document.getElementById('cfgToken').value = localStorage.getItem('gh_token') || '';
+
+      if (isAdminSession()) {
+        showAdminCard();
+        if (localStorage.getItem('gh_owner') && localStorage.getItem('gh_token')) {
+          loadDataFromGitHub();
+        }
+      }
+    });
+
+    // ---------- Base64（支援中文） ----------
+    function toBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    function fromBase64(str) {
+      const binary = atob(str.replace(/\n/g, ''));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function showStatus(text, isError = false) {
+      const msg = document.getElementById('statusMsg');
+      msg.innerText = text;
+      msg.className = 'status-msg ' + (isError ? 'error' : 'success');
+      msg.style.display = 'block';
+    }
+
+    function saveConfig() {
+      localStorage.setItem('gh_owner', document.getElementById('cfgOwner').value.trim());
+      localStorage.setItem('gh_repo', document.getElementById('cfgRepo').value.trim());
+      localStorage.setItem('gh_branch', document.getElementById('cfgBranch').value.trim());
+      localStorage.setItem('gh_token', document.getElementById('cfgToken').value.trim());
+    }
+
+    // ---------- 從 GitHub API 取得 data.json ----------
+    async function loadDataFromGitHub() {
+      saveConfig();
+      const owner = document.getElementById('cfgOwner').value.trim();
+      const repo = document.getElementById('cfgRepo').value.trim();
+      const branch = document.getElementById('cfgBranch').value.trim();
+      const token = document.getElementById('cfgToken').value.trim();
+
+      if (!owner || !repo) {
+        showStatus("請先填寫 GitHub 帳號與專案名稱", true);
+        return;
+      }
+
+      showStatus("讀取資料中...");
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json?ref=${branch}`;
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      try {
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status}: 讀取失敗`);
+
+        const fileData = await res.json();
+        fileSha = fileData.sha;
+        const jsonText = fromBase64(fileData.content);
+        currentData = JSON.parse(jsonText);
+        workingRooms = JSON.parse(JSON.stringify(currentData.rooms || []));
+
+        renderAdminUI();
+        showStatus("資料已順利從 GitHub 載入！");
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    }
+
+    // ---------- 渲染後台表單 ----------
+    function renderAdminUI() {
+      if (!currentData) return;
+      document.getElementById('inputUnitPrice').value = currentData.unitPrice;
+      document.getElementById('mainPrev').value = currentData.mainMeter.previous;
+      document.getElementById('mainCurr').value = currentData.mainMeter.current;
+      renderAdminTable();
+    }
+
+    function renderAdminTable() {
+      const body = document.getElementById('adminTableBody');
+      body.innerHTML = '';
+      workingRooms.forEach((room, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="text" id="roomName_${i}" value="${escapeHtml(room.name)}" placeholder="例如: 101"></td>
+          <td><input type="number" id="roomPrev_${i}" value="${room.previous}"></td>
+          <td><input type="number" id="roomCurr_${i}" value="${room.current}"></td>
+          <td><button type="button" class="btn-delete-room" onclick="deleteRoom(${i})">🗑 刪除</button></td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    // 把目前輸入框裡的值，同步寫回 workingRooms 陣列，避免新增/刪除列時遺失尚未儲存的編輯內容
+    function syncInputsToWorkingRooms() {
+      workingRooms.forEach((room, i) => {
+        const nameEl = document.getElementById(`roomName_${i}`);
+        const prevEl = document.getElementById(`roomPrev_${i}`);
+        const currEl = document.getElementById(`roomCurr_${i}`);
+        if (nameEl) room.name = nameEl.value.trim() || room.name;
+        if (prevEl) room.previous = parseFloat(prevEl.value) || 0;
+        if (currEl) room.current = parseFloat(currEl.value) || 0;
+      });
+    }
+
+    function addRoom() {
+      syncInputsToWorkingRooms();
+      workingRooms.push({ id: '', name: '新房號', previous: 0, current: 0 });
+      renderAdminTable();
+      // 讓新增的那一列自動聚焦，方便直接輸入房號
+      const idx = workingRooms.length - 1;
+      const el = document.getElementById(`roomName_${idx}`);
+      if (el) { el.focus(); el.select(); }
+    }
+
+    function deleteRoom(idx) {
+      syncInputsToWorkingRooms();
+      if (workingRooms.length <= 1) {
+        alert('至少需保留一間房號。');
+        return;
+      }
+      const roomName = workingRooms[idx].name || '此房號';
+      if (!confirm(`確定要刪除「${roomName}」嗎？此操作在按下「儲存並 Commit」前都還可以復原（重新載入資料即可）。`)) return;
+      workingRooms.splice(idx, 1);
+      renderAdminTable();
+    }
+
+    // ---------- 將更新後的 JSON 直接 Commit 回 GitHub ----------
+    async function saveDataToGitHub() {
+      saveConfig();
+      const owner = document.getElementById('cfgOwner').value.trim();
+      const repo = document.getElementById('cfgRepo').value.trim();
+      const branch = document.getElementById('cfgBranch').value.trim();
+      const token = document.getElementById('cfgToken').value.trim();
+
+      if (!token) {
+        showStatus("寫入 GitHub 需要填寫 Personal Access Token (PAT)", true);
+        return;
+      }
+
+      syncInputsToWorkingRooms();
+
+      // 房號不可空白或重複，儲存前先做基本檢查
+      const names = workingRooms.map(r => r.name.trim());
+      if (names.some(n => !n)) {
+        showStatus("有房號欄位是空白的，請填寫後再儲存。", true);
+        return;
+      }
+      const dup = names.find((n, i) => names.indexOf(n) !== i);
+      if (dup) {
+        showStatus(`房號「${dup}」重複了，請確認每個房號唯一。`, true);
+        return;
+      }
+
+      const updatedData = {
+        unitPrice: parseFloat(document.getElementById('inputUnitPrice').value) || 0,
+        mainMeter: {
+          previous: parseFloat(document.getElementById('mainPrev').value) || 0,
+          current: parseFloat(document.getElementById('mainCurr').value) || 0
+        },
+        rooms: workingRooms.map(r => ({
+          id: r.name,
+          name: r.name,
+          previous: r.previous,
+          current: r.current
+        }))
+      };
+
+      showStatus("正在寫入 GitHub...");
+      document.getElementById('saveBtn').disabled = true;
+
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json`;
+      const bodyPayload = {
+        message: "Update electricity usage data via Admin Dashboard",
+        content: toBase64(JSON.stringify(updatedData, null, 2)),
+        sha: fileSha,
+        branch: branch
+      };
+
+      try {
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          body: JSON.stringify(bodyPayload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(`GitHub 寫入失敗: ${errData.message}`);
+        }
+
+        const resData = await res.json();
+        fileSha = resData.content.sha;
+        currentData = updatedData;
+        workingRooms = JSON.parse(JSON.stringify(currentData.rooms));
+        renderAdminUI();
+        showStatus("✅ 成功更新至 GitHub！前台數據已同步。");
+      } catch (err) {
+        showStatus(err.message, true);
+      } finally {
+        document.getElementById('saveBtn').disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

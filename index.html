@@ -3,61 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>套房電費管理系統 (GitHub API 連動版)</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 15px; background: #f8f9fa; }
-    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    h2 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 8px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-    .stat-box { background: #e9ecef; padding: 15px; border-radius: 6px; text-align: center; }
-    .stat-value { font-size: 1.5em; font-weight: bold; color: #007bff; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: center; }
-    th { background-color: #007bff; color: white; }
-    input[type="number"], input[type="text"], input[type="password"] { width: 95%; padding: 6px; box-sizing: border-box; }
-    button { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 1em; }
-    button:hover { background: #218838; }
-    button:disabled { background: #6c757d; cursor: not-allowed; }
-    .status-msg { margin-top: 10px; font-weight: bold; padding: 10px; border-radius: 4px; display: none; }
-    .success { background: #d4edda; color: #155724; }
-    .error { background: #f8d7da; color: #721c24; }
-    .config-sec { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
-
-    /* 頂部列與登入按鈕 */
-    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .top-bar h1 { font-size: 1.3em; color: #333; margin: 0; }
-    .btn-login {
-      background: #007bff; color: white; border: none; padding: 8px 16px;
-      border-radius: 4px; cursor: pointer; font-size: 0.9em;
-    }
-    .btn-login:hover { background: #0056b3; }
-    .btn-login.is-logged-in { background: #6c757d; }
-    .btn-login.is-logged-in:hover { background: #565e64; }
-
-    /* 登入彈窗 */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      align-items: center; justify-content: center; z-index: 100;
-    }
-    .modal-overlay.show { display: flex; }
-    .modal-box {
-      background: white; padding: 24px; border-radius: 8px; width: 90%; max-width: 320px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-    }
-    .modal-box h3 { margin-top: 0; }
-    .modal-box input[type="password"] { margin-bottom: 12px; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
-    .modal-actions button { flex: 1; }
-    .btn-cancel { background: #6c757d; }
-    .btn-cancel:hover { background: #565e64; }
-    .modal-error { color: #721c24; font-size: 0.9em; margin: -6px 0 10px; display: none; }
-  </style>
+  <title>套房電費管理系統</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <div class="top-bar">
     <h1>🏠 套房電費管理系統</h1>
-    <button type="button" id="loginBtn" class="btn-login" onclick="handleLoginButtonClick()">🔐 登入</button>
+    <a class="btn-link" href="admin.html">🔐 管理後台</a>
   </div>
 
   <!-- 前台展示 -->
@@ -80,142 +33,20 @@
           <th>應繳金額</th>
         </tr>
       </thead>
-      <tbody id="tenantTableBody"></tbody>
+      <tbody id="tenantTableBody">
+        <tr><td colspan="5">資料載入中...</td></tr>
+      </tbody>
     </table>
-  </div>
-
-  <!-- 後台與設定：預設隱藏，登入後才顯示 -->
-  <div class="card" id="adminCard" style="display:none;">
-    <h2>⚙️ 後台 - 抄表與 API 儲存</h2>
-    
-    <!-- GitHub API 連線設定 -->
-    <div class="config-sec">
-      <h3 style="margin-top:0;">🔗 GitHub 儲存庫同步設定</h3>
-      <div class="grid">
-        <div><label>帳號 (Owner):</label><input type="text" id="cfgOwner" placeholder="例如: your-username"></div>
-        <div><label>專案 (Repo):</label><input type="text" id="cfgRepo" placeholder="例如: electricity-system"></div>
-        <div><label>分支 (Branch):</label><input type="text" id="cfgBranch" value="main"></div>
-      </div>
-      <p style="margin-bottom:5px;"><label>Personal Access Token (PAT):</label></p>
-      <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxxxx">
-      <br><br>
-      <button type="button" style="background:#17a2b8;" onclick="loadDataFromGitHub()">🔄 載入最新資料</button>
-    </div>
-
-    <form id="meterForm">
-      <p>
-        <label><strong>台電標準單價 (元/度)：</strong></label>
-        <input type="number" step="0.1" id="inputUnitPrice" required>
-      </p>
-
-      <h3>總電表讀數</h3>
-      <div class="grid">
-        <div><label>上次度數：</label><input type="number" id="mainPrev" required></div>
-        <div><label>本次度數：</label><input type="number" id="mainCurr" required></div>
-      </div>
-
-      <h3>各分電表讀數</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>房號</th>
-            <th>上次度數</th>
-            <th>本次度數</th>
-          </tr>
-        </thead>
-        <tbody id="adminTableBody"></tbody>
-      </table>
-      <br>
-      <button type="button" id="saveBtn" onclick="saveDataToGitHub()">💾 儲存並 Commit 到 GitHub</button>
-      <div id="statusMsg" class="status-msg"></div>
-    </form>
-  </div>
-
-  <!-- 登入彈窗 -->
-  <div class="modal-overlay" id="loginModal">
-    <div class="modal-box">
-      <h3>🔐 管理員登入</h3>
-      <p class="modal-error" id="loginError">密碼錯誤，請再試一次。</p>
-      <input type="password" id="loginPasswordInput" placeholder="請輸入管理密碼" autocomplete="off">
-      <div class="modal-actions">
-        <button type="button" class="btn-cancel" onclick="closeLoginModal()">取消</button>
-        <button type="button" onclick="attemptLogin()">登入</button>
-      </div>
-    </div>
+    <div id="statusMsg" class="status-msg"></div>
   </div>
 
   <script>
-    // 管理密碼：僅用於避免一般訪客誤入後台介面，不是真正的安全機制。
-    // 真正的寫入權限仍取決於是否填寫了正確的 GitHub Personal Access Token。
-    // 請自行修改成你自己的密碼。
-    const ADMIN_PASSWORD = 'itri18899';
-
-    function isAdminSession() {
-      return sessionStorage.getItem('isAdminLoggedIn') === '1';
-    }
-
-    function showAdminCard() {
-      document.getElementById('adminCard').style.display = 'block';
-      const btn = document.getElementById('loginBtn');
-      btn.textContent = '🔓 登出後台';
-      btn.classList.add('is-logged-in');
-      btn.onclick = handleLogout;
-    }
-
-    function hideAdminCard() {
-      document.getElementById('adminCard').style.display = 'none';
-      const btn = document.getElementById('loginBtn');
-      btn.textContent = '🔐 登入';
-      btn.classList.remove('is-logged-in');
-      btn.onclick = handleLoginButtonClick;
-    }
-
-    function handleLoginButtonClick() {
-      document.getElementById('loginPasswordInput').value = '';
-      document.getElementById('loginError').style.display = 'none';
-      document.getElementById('loginModal').classList.add('show');
-      document.getElementById('loginPasswordInput').focus();
-    }
-
-    function closeLoginModal() {
-      document.getElementById('loginModal').classList.remove('show');
-    }
-
-    function attemptLogin() {
-      const input = document.getElementById('loginPasswordInput').value;
-      if (input === ADMIN_PASSWORD) {
-        sessionStorage.setItem('isAdminLoggedIn', '1');
-        closeLoginModal();
-        showAdminCard();
-      } else {
-        document.getElementById('loginError').style.display = 'block';
-      }
-    }
-
-    function handleLogout() {
-      sessionStorage.removeItem('isAdminLoggedIn');
-      hideAdminCard();
-    }
-
-    // 讓輸入密碼後按 Enter 直接送出
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('loginPasswordInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') attemptLogin();
-      });
-    });
-
-    let currentData = null;
-    let fileSha = ""; // GitHub 修改檔案時必須帶上的 SHA 驗證碼
-
-    // 文字 Base64 編解碼 (支援 UTF-8 中文字串)
-    function toBase64(str) {
-      const bytes = new TextEncoder().encode(str);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary);
-    }
+    // 這個網站所在的 GitHub 位置。若你的訪客從未打開過 admin.html 設定過連線資訊，
+    // 前台就會用這裡的預設值去讀取公開的 data.json（讀取公開檔案不需要 PAT）。
+    // 請視你實際部署的帳號/專案/分支修改以下三個預設值。
+    const DEFAULT_OWNER = 'leien08';
+    const DEFAULT_REPO = 'billing_app';
+    const DEFAULT_BRANCH = 'main';
 
     function fromBase64(str) {
       const binary = atob(str.replace(/\n/g, ''));
@@ -226,32 +57,6 @@
       return new TextDecoder().decode(bytes);
     }
 
-    // 初始化：載入本地紀錄的設定
-    window.onload = () => {
-      document.getElementById('cfgOwner').value = localStorage.getItem('gh_owner') || '';
-      document.getElementById('cfgRepo').value = localStorage.getItem('gh_repo') || '';
-      document.getElementById('cfgBranch').value = localStorage.getItem('gh_branch') || 'main';
-      document.getElementById('cfgToken').value = localStorage.getItem('gh_token') || '';
-
-      // 前台統計對所有訪客開放，不需要登入即可載入顯示
-      if (localStorage.getItem('gh_owner') && localStorage.getItem('gh_token')) {
-        loadDataFromGitHub();
-      }
-
-      // 若此瀏覽器分頁先前已登入過後台，重新整理後維持登入狀態
-      if (isAdminSession()) {
-        showAdminCard();
-      }
-    };
-
-    // 儲存 GitHub 設定至 LocalStorage
-    function saveConfig() {
-      localStorage.setItem('gh_owner', document.getElementById('cfgOwner').value.trim());
-      localStorage.setItem('gh_repo', document.getElementById('cfgRepo').value.trim());
-      localStorage.setItem('gh_branch', document.getElementById('cfgBranch').value.trim());
-      localStorage.setItem('gh_token', document.getElementById('cfgToken').value.trim());
-    }
-
     function showStatus(text, isError = false) {
       const msg = document.getElementById('statusMsg');
       msg.innerText = text;
@@ -259,74 +64,47 @@
       msg.style.display = 'block';
     }
 
-    // 從 GitHub API 取得 data.json
-    async function loadDataFromGitHub() {
-      saveConfig();
-      const owner = document.getElementById('cfgOwner').value.trim();
-      const repo = document.getElementById('cfgRepo').value.trim();
-      const branch = document.getElementById('cfgBranch').value.trim();
-      const token = document.getElementById('cfgToken').value.trim();
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
-      if (!owner || !repo) {
-        showStatus("請先填寫 GitHub 帳號與專案名稱", true);
-        return;
-      }
+    async function loadPublicData() {
+      // 若這台裝置曾經在 admin.html 登入過並設定過連線資訊，沿用該設定；否則使用預設值。
+      const owner = localStorage.getItem('gh_owner') || DEFAULT_OWNER;
+      const repo = localStorage.getItem('gh_repo') || DEFAULT_REPO;
+      const branch = localStorage.getItem('gh_branch') || DEFAULT_BRANCH;
 
-      showStatus("讀取資料中...");
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json?ref=${branch}`;
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
       try {
-        const res = await fetch(url, { headers });
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}: 讀取失敗`);
-        
-        const fileData = await res.json();
-        fileSha = fileData.sha; // 記錄當前檔案 SHA
-        const jsonText = fromBase64(fileData.content);
-        currentData = JSON.parse(jsonText);
 
-        renderUI();
-        showStatus("資料已順利從 GitHub 載入！");
+        const fileData = await res.json();
+        const jsonText = fromBase64(fileData.content);
+        const data = JSON.parse(jsonText);
+        renderPublicUI(data);
       } catch (err) {
-        showStatus(err.message, true);
+        showStatus('資料讀取失敗：' + err.message, true);
+        document.getElementById('tenantTableBody').innerHTML =
+          '<tr><td colspan="5">資料讀取失敗，請稍後再試</td></tr>';
       }
     }
 
-    // 渲染 UI
-    function renderUI() {
-      if (!currentData) return;
-
-      document.getElementById('inputUnitPrice').value = currentData.unitPrice;
-      document.getElementById('mainPrev').value = currentData.mainMeter.previous;
-      document.getElementById('mainCurr').value = currentData.mainMeter.current;
-
-      // 後台表格
-      const adminBody = document.getElementById('adminTableBody');
-      adminBody.innerHTML = '';
-      currentData.rooms.forEach((room, i) => {
-        adminBody.innerHTML += `
-          <tr>
-            <td>${room.name}</td>
-            <td><input type="number" id="roomPrev_${i}" value="${room.previous}"></td>
-            <td><input type="number" id="roomCurr_${i}" value="${room.current}"></td>
-          </tr>
-        `;
-      });
-
-      // 前台數據與表格
-      const mainUsage = currentData.mainMeter.current - currentData.mainMeter.previous;
-      document.getElementById('displayUnitPrice').innerText = currentData.unitPrice;
+    function renderPublicUI(data) {
+      const mainUsage = data.mainMeter.current - data.mainMeter.previous;
+      document.getElementById('displayUnitPrice').innerText = data.unitPrice;
       document.getElementById('mainUsage').innerText = mainUsage >= 0 ? mainUsage : 0;
-      document.getElementById('mainAmount').innerText = (mainUsage * currentData.unitPrice).toFixed(0);
+      document.getElementById('mainAmount').innerText = (mainUsage * data.unitPrice).toFixed(0);
 
       const tenantBody = document.getElementById('tenantTableBody');
       tenantBody.innerHTML = '';
-      currentData.rooms.forEach(room => {
+      data.rooms.forEach(room => {
         const usage = room.current - room.previous;
-        const amount = usage * currentData.unitPrice;
+        const amount = usage * data.unitPrice;
         tenantBody.innerHTML += `
           <tr>
-            <td>${room.name}</td>
+            <td>${escapeHtml(room.name)}</td>
             <td>${room.previous}</td>
             <td>${room.current}</td>
             <td>${usage >= 0 ? usage : 0} 度</td>
@@ -336,71 +114,7 @@
       });
     }
 
-    // 將更新後的 JSON 直接 Commit 回 GitHub
-    async function saveDataToGitHub() {
-      saveConfig();
-      const owner = document.getElementById('cfgOwner').value.trim();
-      const repo = document.getElementById('cfgRepo').value.trim();
-      const branch = document.getElementById('cfgBranch').value.trim();
-      const token = document.getElementById('cfgToken').value.trim();
-
-      if (!token) {
-        showStatus("寫入 GitHub 需要填寫 Personal Access Token (PAT)", true);
-        return;
-      }
-
-      // 1. 組裝 UI 上的數據
-      const updatedData = {
-        unitPrice: parseFloat(document.getElementById('inputUnitPrice').value) || 0,
-        mainMeter: {
-          previous: parseFloat(document.getElementById('mainPrev').value) || 0,
-          current: parseFloat(document.getElementById('mainCurr').value) || 0
-        },
-        rooms: currentData.rooms.map((room, i) => ({
-          ...room,
-          previous: parseFloat(document.getElementById(`roomPrev_${i}`).value) || 0,
-          current: parseFloat(document.getElementById(`roomCurr_${i}`).value) || 0
-        }))
-      };
-
-      showStatus("正在寫入 GitHub...");
-      document.getElementById('saveBtn').disabled = true;
-
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json`;
-      const bodyPayload = {
-        message: "Update electricity usage data via Admin Dashboard",
-        content: toBase64(JSON.stringify(updatedData, null, 2)),
-        sha: fileSha,
-        branch: branch
-      };
-
-      try {
-        const res = await fetch(url, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-          },
-          body: JSON.stringify(bodyPayload)
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(`GitHub 寫入失敗: ${errData.message}`);
-        }
-
-        const resData = await res.json();
-        fileSha = resData.content.sha; // 更新最新的 SHA
-        currentData = updatedData;
-        renderUI();
-        showStatus("✅ 成功更新至 GitHub！前台數據已同步。");
-      } catch (err) {
-        showStatus(err.message, true);
-      } finally {
-        document.getElementById('saveBtn').disabled = false;
-      }
-    }
+    window.onload = loadPublicData;
   </script>
 </body>
 </html>
