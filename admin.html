@@ -4,13 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>套房電費管理系統｜後台</title>
+  <script>
+    // 盡早套用已儲存的深/淺色主題，避免畫面先閃一下淺色再變深色
+    (function () {
+      const saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <div class="top-bar">
     <h1>⚙️ 電費後台管理</h1>
-    <a class="btn-link" href="index.html">🏠 回前台</a>
+    <div class="top-bar-actions">
+      <button type="button" class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">🌙 深色</button>
+      <a class="btn-link" href="index.html">🏠 回前台</a>
+    </div>
   </div>
 
   <!-- 尚未登入時顯示 -->
@@ -56,7 +66,7 @@
 
     <form id="meterForm" onsubmit="return false;">
       <p>
-        <label><strong>電費抄表日期：</strong></label>
+        <label><strong>抄表日期：</strong></label>
         <input type="date" id="inputMeterDate">
       </p>
 
@@ -80,13 +90,13 @@
 
       <h3>💧 水費分攤設定</h3>
       <div class="grid">
-        <div><label>水費抄表日期：</label><input type="date" id="inputWaterDate"></div>
         <div><label>水費總金額：</label><input type="number" step="1" id="inputWaterTotal" placeholder="例如: 1200"></div>
         <div><label>分攤人數：</label><input type="number" step="1" min="1" id="inputWaterPeople" placeholder="例如: 6"></div>
       </div>
       <p class="field-note">前台會顯示「水費均攤費用」= 水費總金額 ÷ 分攤人數（每人應繳金額：<strong><span id="waterPerPersonPreview">0</span> 元</strong>）。</p>
 
       <h3>各分電表讀數</h3>
+      <div id="floorLegend" class="floor-legend" style="display:none;"></div>
       <table>
         <thead>
           <tr>
@@ -252,12 +262,54 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // 依房號前綴（例如 "1-1" -> 第1組）判斷分組，回傳 1 / 2 / 3，其餘回傳 null
-    function roomGroupOf(nameOrId) {
-      const match = String(nameOrId || '').match(/^(\d+)-\d+/);
-      if (!match) return null;
-      const g = parseInt(match[1], 10);
-      return (g >= 1 && g <= 3) ? g : null;
+    // ---------- 深/淺色主題切換 ----------
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      updateThemeToggleLabel();
+    }
+
+    function updateThemeToggleLabel() {
+      const btn = document.getElementById('themeToggleBtn');
+      if (!btn) return;
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      btn.innerText = current === 'dark' ? '☀️ 淺色' : '🌙 深色';
+    }
+
+    // ---------- 樓層色彩分組：房號如 "1-1"、"2-5" 依樓層數字自動分色 ----------
+    // 房號格式須為「樓層-戶號」（例如 1-1 ~ 1-10、2-1 ~ 2-10...），前面的數字視為樓層。
+    // 色票共有 6 組，樓層數超過 6 會循環使用（例如 7 樓會沿用 1 樓的顏色）。
+    function getFloorNumber(roomName) {
+      const match = String(roomName).match(/^(\d+)-/);
+      return match ? parseInt(match[1], 10) : null;
+    }
+
+    function getFloorColorIndex(roomName) {
+      const floor = getFloorNumber(roomName);
+      if (floor === null) return null;
+      return (floor - 1) % 6;
+    }
+
+    function renderFloorLegend(containerId, rooms) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const floors = new Set();
+      rooms.forEach(r => {
+        const f = getFloorNumber(r.name);
+        if (f !== null) floors.add(f);
+      });
+      if (floors.size === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      const sorted = Array.from(floors).sort((a, b) => a - b);
+      container.innerHTML = sorted.map(f => {
+        const idx = (f - 1) % 6;
+        return `<div class="floor-legend-item"><span class="floor-legend-swatch" style="background:var(--floor-${idx}-bg)"></span>${f} 樓</div>`;
+      }).join('');
+      container.style.display = 'flex';
     }
 
     function showStatus(text, isError = false) {
@@ -408,7 +460,6 @@
     function renderAdminUI() {
       if (!currentData) return;
       document.getElementById('inputMeterDate').value = currentData.meterReadingDate || '';
-      document.getElementById('inputWaterDate').value = currentData.waterReadingDate || '';
       document.getElementById('inputUnitPrice').value = currentData.unitPrice;
       document.getElementById('mainPrev').value = currentData.mainMeter.previous;
       document.getElementById('mainCurr').value = currentData.mainMeter.current;
@@ -437,9 +488,9 @@
         const unlockBtn = locked
           ? `<button type="button" class="btn-unlock" onclick="unlockRoomPrev(${i})" title="解鎖手動編輯">🔓 可編輯</button>`
           : '';
-        const group = roomGroupOf(room.name);
+        const colorIdx = getFloorColorIndex(room.name);
         const tr = document.createElement('tr');
-        if (group) tr.className = `group-${group}`;
+        if (colorIdx !== null) tr.className = `floor-${colorIdx}`;
         tr.innerHTML = `
           <td><input type="text" id="roomName_${i}" value="${escapeHtml(room.name)}" placeholder="例如: 101"></td>
           <td>
@@ -453,6 +504,7 @@
         `;
         body.appendChild(tr);
       });
+      renderFloorLegend('floorLegend', workingRooms);
     }
 
     // 把目前輸入框裡的值，同步寫回 workingRooms 陣列，避免新增/刪除列時遺失尚未儲存的編輯內容
@@ -566,7 +618,6 @@
       const updatedData = {
         adminPasswordHash: (currentData && currentData.adminPasswordHash) || currentPasswordHash || DEFAULT_ADMIN_PASSWORD_HASH,
         meterReadingDate: document.getElementById('inputMeterDate').value || '',
-        waterReadingDate: document.getElementById('inputWaterDate').value || '',
         unitPrice: parseFloat(document.getElementById('inputUnitPrice').value) || 0,
         mainMeter: {
           previous: parseFloat(document.getElementById('mainPrev').value) || 0,

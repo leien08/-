@@ -1,95 +1,59 @@
 :root {
-  --bg-page: #f8f9fa;
-  --bg-card: #ffffff;
-  --bg-stat: #e9ecef;
-  --text-primary: #333333;
-  --text-secondary: #6c757d;
-  --border-color: #dee2e6;
+  --bg: #f8f9fa;
+  --text: #333333;
+  --text-muted: #6c757d;
+  --card-bg: #ffffff;
+  --card-shadow: rgba(0,0,0,0.1);
   --accent: #007bff;
   --accent-hover: #0069d9;
-  --accent-contrast: #ffffff;
-
-  --success-bg: #d4edda;
-  --success-text: #155724;
-  --error-bg: #f8d7da;
-  --error-text: #721c24;
-
-  --config-bg: #fff3cd;
-  --config-border: #ffeeba;
-  --security-bg: #e7f1ff;
-  --security-border: #b6d4fe;
-
+  --stat-box-bg: #e9ecef;
+  --border: #dee2e6;
+  --th-bg: #007bff;
+  --th-text: #ffffff;
+  --input-bg: #ffffff;
+  --input-text: #333333;
+  --input-border: #ced4da;
   --locked-bg: #e9ecef;
   --locked-text: #6c757d;
+  --modal-bg: #ffffff;
+  --modal-overlay: rgba(0,0,0,0.45);
 
-  --btn-unlock-bg: #ffc107;
-  --btn-unlock-hover: #e0a800;
-  --btn-save-bg: #28a745;
-  --btn-save-hover: #218838;
-  --btn-disabled-bg: #6c757d;
-  --btn-delete-bg: #dc3545;
-  --btn-delete-hover: #bb2d3b;
-  --btn-add-bg: #17a2b8;
-  --btn-add-hover: #117a8b;
-  --btn-cancel-bg: #6c757d;
-  --btn-cancel-hover: #565e64;
-
-  --modal-overlay: rgba(0, 0, 0, 0.45);
-  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.2);
-
-  /* 房號分組色彩：第1組/第2組/第3組（淺色主題） */
-  --group1-bg: #EEEDFE; --group1-border: #AFA9EC; --group1-text: #3C3489;
-  --group2-bg: #E1F5EE; --group2-border: #5DCAA5; --group2-text: #085041;
-  --group3-bg: #FAECE7; --group3-border: #F0997B; --group3-text: #712B13;
+  /* 樓層色彩（淺色主題）：房號依 "樓層-戶號" 前綴自動分組，色票依樓層數字循環使用 */
+  --floor-0-bg: #e3f2fd; --floor-0-text: #0d47a1;
+  --floor-1-bg: #e8f5e9; --floor-1-text: #1b5e20;
+  --floor-2-bg: #fff3e0; --floor-2-text: #e65100;
+  --floor-3-bg: #fce4ec; --floor-3-text: #880e4f;
+  --floor-4-bg: #ede7f6; --floor-4-text: #4527a0;
+  --floor-5-bg: #fffde7; --floor-5-text: #827717;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-page: #16181c;
-    --bg-card: #202329;
-    --bg-stat: #262a31;
-    --text-primary: #e8e9ea;
-    --text-secondary: #a2a7ae;
-    --border-color: #3a3e45;
-    --accent: #4dabf7;
-    --accent-hover: #74c0fc;
-    --accent-contrast: #0b1a2b;
+[data-theme="dark"] {
+  --bg: #16181c;
+  --text: #e4e6eb;
+  --text-muted: #a0a4ab;
+  --card-bg: #24272c;
+  --card-shadow: rgba(0,0,0,0.4);
+  --accent: #4098ff;
+  --accent-hover: #66aeff;
+  --stat-box-bg: #2f3338;
+  --border: #3a3e44;
+  --th-bg: #1c5fa8;
+  --th-text: #ffffff;
+  --input-bg: #2f3338;
+  --input-text: #e4e6eb;
+  --input-border: #4a4f56;
+  --locked-bg: #33373d;
+  --locked-text: #a0a4ab;
+  --modal-bg: #24272c;
+  --modal-overlay: rgba(0,0,0,0.65);
 
-    --success-bg: #143523;
-    --success-text: #8fd9ab;
-    --error-bg: #3a1f21;
-    --error-text: #f1a5ac;
-
-    --config-bg: #3a3220;
-    --config-border: #5c4f2c;
-    --security-bg: #1c2b3d;
-    --security-border: #2f4a68;
-
-    --locked-bg: #2a2d33;
-    --locked-text: #9a9ea5;
-
-    --btn-unlock-bg: #a5790f;
-    --btn-unlock-hover: #c28f16;
-    --btn-save-bg: #1f8a3c;
-    --btn-save-hover: #26a34a;
-    --btn-disabled-bg: #4a4e55;
-    --btn-delete-bg: #a5333f;
-    --btn-delete-hover: #c03e4c;
-    --btn-add-bg: #14808f;
-    --btn-add-hover: #1a99ab;
-    --btn-cancel-bg: #4a4e55;
-    --btn-cancel-hover: #5b5f67;
-
-    --modal-overlay: rgba(0, 0, 0, 0.6);
-    --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.4);
-    --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.5);
-
-    /* 房號分組色彩（深色主題，反轉明暗） */
-    --group1-bg: #3C3489; --group1-border: #7F77DD; --group1-text: #CECBF6;
-    --group2-bg: #085041; --group2-border: #1D9E75; --group2-text: #9FE1CB;
-    --group3-bg: #712B13; --group3-border: #D85A30; --group3-text: #F5C4B3;
-  }
+  /* 樓層色彩（深色主題）：同一組樓層變數，換成適合深底的飽和/低亮度配色 */
+  --floor-0-bg: #123258; --floor-0-text: #8ec4ff;
+  --floor-1-bg: #163a24; --floor-1-text: #8fd99f;
+  --floor-2-bg: #4a2c0a; --floor-2-text: #ffc27a;
+  --floor-3-bg: #4a1530; --floor-3-text: #ff9ec4;
+  --floor-4-bg: #2c1a52; --floor-4-text: #c3a8ff;
+  --floor-5-bg: #4a4308; --floor-5-text: #f0e488;
 }
 
 body {
@@ -97,28 +61,32 @@ body {
   max-width: 800px;
   margin: 20px auto;
   padding: 0 15px;
-  background: var(--bg-page);
-  color: var(--text-primary);
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.top-bar h1 { font-size: 1.3em; color: var(--text-primary); margin: 0; }
+.top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+.top-bar h1 { font-size: 1.3em; color: var(--text); margin: 0; }
+.top-bar-actions { display: flex; align-items: center; gap: 8px; }
 
-.card { background: var(--bg-card); padding: 20px; border-radius: 8px; box-shadow: var(--shadow-card); margin-bottom: 20px; }
-h2 { margin-top: 0; color: var(--text-primary); border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
-h3 { color: var(--text-primary); }
+.card { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px var(--card-shadow); margin-bottom: 20px; }
+h2 { margin-top: 0; color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+h3 { color: var(--text); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-.stat-box { background: var(--bg-stat); padding: 15px; border-radius: 6px; text-align: center; color: var(--text-primary); }
+.stat-box { background: var(--stat-box-bg); padding: 15px; border-radius: 6px; text-align: center; }
 .stat-value { font-size: 1.5em; font-weight: bold; color: var(--accent); }
 
 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-th, td { border: 1px solid var(--border-color); padding: 10px; text-align: center; color: var(--text-primary); }
-th { background-color: var(--accent); color: var(--accent-contrast); }
+th, td { border: 1px solid var(--border); padding: 10px; text-align: center; }
+th { background-color: var(--th-bg); color: var(--th-text); }
+td { color: var(--text); }
 
 input[type="number"], input[type="text"], input[type="password"], input[type="date"] {
   width: 95%; padding: 6px; box-sizing: border-box;
-  background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;
+  background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);
+  border-radius: 4px;
 }
 
 .locked-input {
@@ -130,41 +98,49 @@ input[type="number"], input[type="text"], input[type="password"], input[type="da
 .input-with-btn { display: flex; align-items: center; gap: 6px; }
 .input-with-btn input { flex: 1; }
 .btn-unlock {
-  background: var(--btn-unlock-bg); color: #333; padding: 6px 10px; font-size: 0.8em;
+  background: #ffc107; color: #333; padding: 6px 10px; font-size: 0.8em;
   white-space: nowrap; flex: none;
 }
-.btn-unlock:hover { background: var(--btn-unlock-hover); }
+.btn-unlock:hover { background: #e0a800; }
 
-button { background: var(--btn-save-bg); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 1em; }
-button:hover { background: var(--btn-save-hover); }
-button:disabled { background: var(--btn-disabled-bg); cursor: not-allowed; }
+button { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 1em; }
+button:hover { background: #218838; }
+button:disabled { background: #6c757d; cursor: not-allowed; }
 
 .btn-link {
   display: inline-block; background: transparent; color: var(--accent); border: 1px solid var(--accent);
   padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.9em;
 }
-.btn-link:hover { background: var(--accent); color: var(--accent-contrast); }
+.btn-link:hover { background: var(--accent); color: white; }
+
+.btn-theme-toggle {
+  background: transparent; border: 1px solid var(--border); color: var(--text);
+  padding: 8px 12px; border-radius: 4px; font-size: 0.9em;
+}
+.btn-theme-toggle:hover { background: var(--stat-box-bg); }
 
 .status-msg { margin-top: 10px; font-weight: bold; padding: 10px; border-radius: 4px; display: none; }
-.success { background: var(--success-bg); color: var(--success-text); }
-.error { background: var(--error-bg); color: var(--error-text); }
+.success { background: #d4edda; color: #155724; }
+.error { background: #f8d7da; color: #721c24; }
 
-.config-sec { background: var(--config-bg); border: 1px solid var(--config-border); padding: 15px; border-radius: 6px; margin-bottom: 15px; }
-.security-sec { background: var(--security-bg); border: 1px solid var(--security-border); padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+.config-sec { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-bottom: 15px; color: #664d03; }
+.security-sec { background: #e7f1ff; border: 1px solid #b6d4fe; padding: 15px; border-radius: 6px; margin-bottom: 15px; color: #084298; }
+[data-theme="dark"] .config-sec { background: #4a3c10; border-color: #7a6420; color: #ffe69c; }
+[data-theme="dark"] .security-sec { background: #123258; border-color: #1c5fa8; color: #a8d1ff; }
 
 .inline-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .inline-actions button { flex: none; }
-.field-note { font-size: 0.8em; color: var(--text-secondary); margin: 6px 0 0; }
+.field-note { font-size: 0.8em; color: var(--text-muted); margin: 6px 0 0; }
 
 /* 房號管理（可新增/刪除列） */
 .btn-delete-room {
-  background: var(--btn-delete-bg); padding: 6px 12px; font-size: 0.85em; white-space: nowrap;
+  background: #dc3545; padding: 6px 12px; font-size: 0.85em; white-space: nowrap;
 }
-.btn-delete-room:hover { background: var(--btn-delete-hover); }
+.btn-delete-room:hover { background: #bb2d3b; }
 .btn-add-room {
-  background: var(--btn-add-bg); margin-top: 10px; font-size: 0.9em;
+  background: #17a2b8; margin-top: 10px; font-size: 0.9em;
 }
-.btn-add-room:hover { background: var(--btn-add-hover); }
+.btn-add-room:hover { background: #117a8b; }
 
 /* 登入彈窗（admin.html 用） */
 .modal-overlay {
@@ -173,34 +149,38 @@ button:disabled { background: var(--btn-disabled-bg); cursor: not-allowed; }
 }
 .modal-overlay.show { display: flex; }
 .modal-box {
-  background: var(--bg-card); padding: 24px; border-radius: 8px; width: 90%; max-width: 320px;
-  box-shadow: var(--shadow-modal);
+  background: var(--modal-bg); padding: 24px; border-radius: 8px; width: 90%; max-width: 320px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
 }
 .modal-box h3 { margin-top: 0; }
 .modal-box input[type="password"] { margin-bottom: 12px; }
 .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
 .modal-actions button { flex: 1; }
-.btn-cancel { background: var(--btn-cancel-bg); }
-.btn-cancel:hover { background: var(--btn-cancel-hover); }
-.modal-error { color: var(--error-text); font-size: 0.9em; margin: -6px 0 10px; display: none; }
+.btn-cancel { background: #6c757d; }
+.btn-cancel:hover { background: #565e64; }
+.modal-error { color: #721c24; font-size: 0.9em; margin: -6px 0 10px; display: none; }
 
 .locked-state {
-  text-align: center; padding: 50px 20px; color: var(--text-secondary);
+  text-align: center; padding: 50px 20px; color: var(--text-muted);
 }
 
-/* 房號分組色彩徽章：1-1~1-10 / 2-1~2-10 / 3-1~3-10 */
-.room-badge {
-  display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.9em; font-weight: bold;
-  border: 1px solid transparent;
-}
-.room-badge.group-1 { background: var(--group1-bg); color: var(--group1-text); border-color: var(--group1-border); }
-.room-badge.group-2 { background: var(--group2-bg); color: var(--group2-text); border-color: var(--group2-border); }
-.room-badge.group-3 { background: var(--group3-bg); color: var(--group3-text); border-color: var(--group3-border); }
-.room-badge.group-none { background: var(--bg-stat); color: var(--text-secondary); border-color: var(--border-color); }
+/* 樓層色彩分組：房號如 "1-1"、"2-5" 依前面的樓層數字自動套用對應色票（淺/深主題各自定義）。
+   JS 會依樓層數字循環套用 .floor-0 ~ .floor-5 這幾個 class 到 <tr>，
+   同時涵蓋前台的純文字儲存格，以及後台可編輯的房號輸入框。 */
+tr.floor-0 td { background: var(--floor-0-bg); color: var(--floor-0-text); }
+tr.floor-1 td { background: var(--floor-1-bg); color: var(--floor-1-text); }
+tr.floor-2 td { background: var(--floor-2-bg); color: var(--floor-2-text); }
+tr.floor-3 td { background: var(--floor-3-bg); color: var(--floor-3-text); }
+tr.floor-4 td { background: var(--floor-4-bg); color: var(--floor-4-text); }
+tr.floor-5 td { background: var(--floor-5-bg); color: var(--floor-5-text); }
 
-tr.group-1 { background: color-mix(in srgb, var(--group1-bg) 45%, var(--bg-card)); }
-tr.group-2 { background: color-mix(in srgb, var(--group2-bg) 45%, var(--bg-card)); }
-tr.group-3 { background: color-mix(in srgb, var(--group3-bg) 45%, var(--bg-card)); }
+tr.floor-0 td input { background: var(--floor-0-bg); color: var(--floor-0-text); border-color: var(--floor-0-text); }
+tr.floor-1 td input { background: var(--floor-1-bg); color: var(--floor-1-text); border-color: var(--floor-1-text); }
+tr.floor-2 td input { background: var(--floor-2-bg); color: var(--floor-2-text); border-color: var(--floor-2-text); }
+tr.floor-3 td input { background: var(--floor-3-bg); color: var(--floor-3-text); border-color: var(--floor-3-text); }
+tr.floor-4 td input { background: var(--floor-4-bg); color: var(--floor-4-text); border-color: var(--floor-4-text); }
+tr.floor-5 td input { background: var(--floor-5-bg); color: var(--floor-5-text); border-color: var(--floor-5-text); }
 
-.meter-dates { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 10px; }
-.meter-dates span.date-item { font-size: 0.9em; color: var(--text-secondary); }
+.floor-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; font-size: 0.85em; }
+.floor-legend-item { display: flex; align-items: center; gap: 6px; }
+.floor-legend-swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }

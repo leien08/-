@@ -4,22 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>套房電費管理系統</title>
+  <script>
+    // 盡早套用已儲存的深/淺色主題，避免畫面先閃一下淺色再變深色
+    (function () {
+      const saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <div class="top-bar">
     <h1>🏠 套房電費管理系統</h1>
-    <a class="btn-link" href="admin.html">🔐 管理後台</a>
+    <div class="top-bar-actions">
+      <button type="button" class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">🌙 深色</button>
+      <a class="btn-link" href="admin.html">🔐 管理後台</a>
+    </div>
   </div>
 
   <!-- 前台展示 -->
   <div class="card">
     <h2>⚡ 前台 - 電費用量統計</h2>
-    <div class="meter-dates">
-      <span id="meterDateLine" class="date-item" style="display:none;">📅 電費抄表日期：<span id="displayMeterDate"></span></span>
-      <span id="waterDateLine" class="date-item" style="display:none;">💧 水費抄表日期：<span id="displayWaterDate"></span></span>
-    </div>
+    <p id="meterDateLine" class="field-note" style="display:none;">📅 抄表日期：<span id="displayMeterDate"></span></p>
     <h3>總電表概況 (單價：<span id="displayUnitPrice">0</span> 元/度)</h3>
     <div class="grid">
       <div class="stat-box"><div>總使用度數</div><div class="stat-value"><span id="mainUsage">0</span> 度</div></div>
@@ -28,6 +35,7 @@
     </div>
 
     <h3>各套房用量明細</h3>
+    <div id="floorLegend" class="floor-legend" style="display:none;"></div>
     <table>
       <thead>
         <tr>
@@ -73,12 +81,54 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // 依房號前綴（例如 "1-1" -> 第1組）判斷分組，回傳 1 / 2 / 3，其餘回傳 null
-    function roomGroupOf(nameOrId) {
-      const match = String(nameOrId || '').match(/^(\d+)-\d+/);
-      if (!match) return null;
-      const g = parseInt(match[1], 10);
-      return (g >= 1 && g <= 3) ? g : null;
+    // ---------- 深/淺色主題切換 ----------
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      updateThemeToggleLabel();
+    }
+
+    function updateThemeToggleLabel() {
+      const btn = document.getElementById('themeToggleBtn');
+      if (!btn) return;
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      btn.innerText = current === 'dark' ? '☀️ 淺色' : '🌙 深色';
+    }
+
+    // ---------- 樓層色彩分組：房號如 "1-1"、"2-5" 依樓層數字自動分色 ----------
+    // 房號格式須為「樓層-戶號」（例如 1-1 ~ 1-10、2-1 ~ 2-10...），前面的數字視為樓層。
+    // 色票共有 6 組，樓層數超過 6 會循環使用（例如 7 樓會沿用 1 樓的顏色）。
+    function getFloorNumber(roomName) {
+      const match = String(roomName).match(/^(\d+)-/);
+      return match ? parseInt(match[1], 10) : null;
+    }
+
+    function getFloorColorIndex(roomName) {
+      const floor = getFloorNumber(roomName);
+      if (floor === null) return null;
+      return (floor - 1) % 6;
+    }
+
+    function renderFloorLegend(containerId, rooms) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const floors = new Set();
+      rooms.forEach(r => {
+        const f = getFloorNumber(r.name);
+        if (f !== null) floors.add(f);
+      });
+      if (floors.size === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      const sorted = Array.from(floors).sort((a, b) => a - b);
+      container.innerHTML = sorted.map(f => {
+        const idx = (f - 1) % 6;
+        return `<div class="floor-legend-item"><span class="floor-legend-swatch" style="background:var(--floor-${idx}-bg)"></span>${f} 樓</div>`;
+      }).join('');
+      container.style.display = 'flex';
     }
 
     async function loadPublicData() {
@@ -112,28 +162,25 @@
 
       if (data.meterReadingDate) {
         document.getElementById('displayMeterDate').innerText = data.meterReadingDate;
-        document.getElementById('meterDateLine').style.display = 'inline';
-      }
-      if (data.waterReadingDate) {
-        document.getElementById('displayWaterDate').innerText = data.waterReadingDate;
-        document.getElementById('waterDateLine').style.display = 'inline';
+        document.getElementById('meterDateLine').style.display = 'block';
       }
 
       const water = data.water || { totalAmount: 0, peopleCount: 1 };
       const waterPerPerson = water.peopleCount > 0 ? water.totalAmount / water.peopleCount : 0;
       document.getElementById('waterPerPerson').innerText = waterPerPerson.toFixed(0);
 
+      renderFloorLegend('floorLegend', data.rooms);
+
       const tenantBody = document.getElementById('tenantTableBody');
       tenantBody.innerHTML = '';
       data.rooms.forEach(room => {
         const usage = room.current - room.previous;
         const amount = usage * data.unitPrice;
-        const group = roomGroupOf(room.id || room.name);
-        const rowClass = group ? `group-${group}` : '';
-        const badgeClass = group ? `group-${group}` : 'group-none';
+        const colorIdx = getFloorColorIndex(room.name);
+        const rowClass = colorIdx !== null ? ` class="floor-${colorIdx}"` : '';
         tenantBody.innerHTML += `
-          <tr class="${rowClass}">
-            <td><span class="room-badge ${badgeClass}">${escapeHtml(room.name)}</span></td>
+          <tr${rowClass}>
+            <td>${escapeHtml(room.name)}</td>
             <td>${room.previous}</td>
             <td>${room.current}</td>
             <td>${usage >= 0 ? usage : 0} 度</td>
@@ -143,7 +190,10 @@
       });
     }
 
-    window.onload = loadPublicData;
+    window.onload = () => {
+      updateThemeToggleLabel();
+      loadPublicData();
+    };
   </script>
 </body>
 </html>
