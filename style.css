@@ -181,6 +181,16 @@ tr.floor-3 td input { background: var(--floor-3-bg); color: var(--floor-3-text);
 tr.floor-4 td input { background: var(--floor-4-bg); color: var(--floor-4-text); border-color: var(--floor-4-text); }
 tr.floor-5 td input { background: var(--floor-5-bg); color: var(--floor-5-text); border-color: var(--floor-5-text); }
 
-.floor-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; font-size: 0.85em; }
-.floor-legend-item { display: flex; align-items: center; gap: 6px; }
-.floor-legend-swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+/* 樓層分組標題列（可收合）：每組房號前的可點擊列，點擊展開/收合底下的房號列 */
+tr.floor-group-header td {
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+  user-select: none;
+}
+tr.floor-group-header.floor-none td {
+  background: var(--stat-box-bg);
+}
+tr.floor-group-header:hover td { filter: brightness(0.96); }
+[data-theme="dark"] tr.floor-group-header:hover td { filter: brightness(1.15); }
+.floor-toggle-icon { display: inline-block; width: 1em; margin-right: 4px; }

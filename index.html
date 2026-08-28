@@ -36,7 +36,6 @@
     </div>
 
     <h3>各套房用量明細</h3>
-    <div id="floorLegend" class="floor-legend" style="display:none;"></div>
     <table>
       <thead>
         <tr>
@@ -98,38 +97,43 @@
       btn.innerText = current === 'dark' ? '☀️ 淺色' : '🌙 深色';
     }
 
-    // ---------- 樓層色彩分組：房號如 "1-1"、"2-5" 依樓層數字自動分色 ----------
+    // ---------- 樓層分組（可收合）：房號如 "1-1"、"2-5" 依樓層數字自動分色與分組 ----------
     // 房號格式須為「樓層-戶號」（例如 1-1 ~ 1-10、2-1 ~ 2-10...），前面的數字視為樓層。
     // 色票共有 6 組，樓層數超過 6 會循環使用（例如 7 樓會沿用 1 樓的顏色）。
+    // 房號不符合此格式的會歸在「其他」分組，一樣可收合，但不上色。
+    let collapsedFloorGroups = new Set();
+
     function getFloorNumber(roomName) {
       const match = String(roomName).match(/^(\d+)-/);
       return match ? parseInt(match[1], 10) : null;
     }
 
-    function getFloorColorIndex(roomName) {
-      const floor = getFloorNumber(roomName);
-      if (floor === null) return null;
-      return (floor - 1) % 6;
+    function groupRoomsByFloor(rooms) {
+      const groups = new Map();
+      rooms.forEach(room => {
+        const floor = getFloorNumber(room.name);
+        const key = floor !== null ? String(floor) : 'other';
+        if (!groups.has(key)) {
+          groups.set(key, { key, floor, colorIdx: floor !== null ? (floor - 1) % 6 : null, rooms: [] });
+        }
+        groups.get(key).rooms.push(room);
+      });
+      return Array.from(groups.values()).sort((a, b) => {
+        if (a.key === 'other') return 1;
+        if (b.key === 'other') return -1;
+        return a.floor - b.floor;
+      });
     }
 
-    function renderFloorLegend(containerId, rooms) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      const floors = new Set();
-      rooms.forEach(r => {
-        const f = getFloorNumber(r.name);
-        if (f !== null) floors.add(f);
+    // 展開/收合某個樓層分組：直接切換該分組所有列的顯示狀態，不重新渲染整個表格
+    function toggleFloorGroup(key, iconEl) {
+      const nowCollapsed = !collapsedFloorGroups.has(key);
+      if (nowCollapsed) collapsedFloorGroups.add(key);
+      else collapsedFloorGroups.delete(key);
+      document.querySelectorAll(`#tenantTableBody tr[data-group="${key}"]`).forEach(tr => {
+        tr.style.display = nowCollapsed ? 'none' : '';
       });
-      if (floors.size === 0) {
-        container.style.display = 'none';
-        return;
-      }
-      const sorted = Array.from(floors).sort((a, b) => a - b);
-      container.innerHTML = sorted.map(f => {
-        const idx = (f - 1) % 6;
-        return `<div class="floor-legend-item"><span class="floor-legend-swatch" style="background:var(--floor-${idx}-bg)"></span>${f} 樓</div>`;
-      }).join('');
-      container.style.display = 'flex';
+      if (iconEl) iconEl.textContent = nowCollapsed ? '▶' : '▼';
     }
 
     async function loadPublicData() {
@@ -174,24 +178,34 @@
         document.getElementById('waterDateLine').style.display = 'block';
       }
 
-      renderFloorLegend('floorLegend', data.rooms);
-
       const tenantBody = document.getElementById('tenantTableBody');
       tenantBody.innerHTML = '';
-      data.rooms.forEach(room => {
-        const usage = room.current - room.previous;
-        const amount = usage * data.unitPrice;
-        const colorIdx = getFloorColorIndex(room.name);
-        const rowClass = colorIdx !== null ? ` class="floor-${colorIdx}"` : '';
+      const groups = groupRoomsByFloor(data.rooms);
+      groups.forEach(g => {
+        const collapsed = collapsedFloorGroups.has(g.key);
+        const colorClass = g.colorIdx !== null ? `floor-${g.colorIdx}` : 'floor-none';
+        const label = g.key === 'other' ? '其他' : `${g.floor} 樓`;
+
         tenantBody.innerHTML += `
-          <tr${rowClass}>
-            <td>${escapeHtml(room.name)}</td>
-            <td>${room.previous}</td>
-            <td>${room.current}</td>
-            <td>${usage >= 0 ? usage : 0} 度</td>
-            <td><strong>$ ${amount >= 0 ? amount.toFixed(0) : 0}</strong></td>
+          <tr class="floor-group-header ${colorClass}" onclick="toggleFloorGroup('${g.key}', this.querySelector('.floor-toggle-icon'))">
+            <td colspan="5"><span class="floor-toggle-icon">${collapsed ? '▶' : '▼'}</span> <strong>${label}</strong>　(${g.rooms.length} 間)</td>
           </tr>
         `;
+
+        g.rooms.forEach(room => {
+          const usage = room.current - room.previous;
+          const amount = usage * data.unitPrice;
+          const hiddenStyle = collapsed ? ' style="display:none;"' : '';
+          tenantBody.innerHTML += `
+            <tr class="${colorClass}" data-group="${g.key}"${hiddenStyle}>
+              <td>${escapeHtml(room.name)}</td>
+              <td>${room.previous}</td>
+              <td>${room.current}</td>
+              <td>${usage >= 0 ? usage : 0} 度</td>
+              <td><strong>$ ${amount >= 0 ? amount.toFixed(0) : 0}</strong></td>
+            </tr>
+          `;
+        });
       });
     }
 

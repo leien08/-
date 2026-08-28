@@ -100,7 +100,6 @@
       <p class="field-note">前台會顯示「水費均攤費用」= 水費總金額 ÷ 分攤人數（每人應繳金額：<strong><span id="waterPerPersonPreview">0</span> 元</strong>）。</p>
 
       <h3>各分電表讀數</h3>
-      <div id="floorLegend" class="floor-legend" style="display:none;"></div>
       <table>
         <thead>
           <tr>
@@ -160,6 +159,7 @@
     let fileSha = "";             // GitHub 修改檔案時必須帶上的 SHA 驗證碼
     let currentPasswordHash = null; // 目前有效的密碼雜湊值（來自 data.json）
     let unlockedPrevIndices = new Set(); // 目前已被手動解鎖「上次度數」的房號索引
+    let collapsedFloorGroups = new Set(); // 目前已收合的樓層分組（依 groupRoomsByFloor 的 key）
 
     // ---------- 登入 / 登出 ----------
     function isAdminSession() {
@@ -289,38 +289,42 @@
       sec.style.display = isHidden ? 'block' : 'none';
     }
 
-    // ---------- 樓層色彩分組：房號如 "1-1"、"2-5" 依樓層數字自動分色 ----------
+    // ---------- 樓層分組（可收合）：房號如 "1-1"、"2-5" 依樓層數字自動分色與分組 ----------
     // 房號格式須為「樓層-戶號」（例如 1-1 ~ 1-10、2-1 ~ 2-10...），前面的數字視為樓層。
     // 色票共有 6 組，樓層數超過 6 會循環使用（例如 7 樓會沿用 1 樓的顏色）。
+    // 房號不符合此格式的會歸在「其他」分組，一樣可收合，但不上色。
     function getFloorNumber(roomName) {
       const match = String(roomName).match(/^(\d+)-/);
       return match ? parseInt(match[1], 10) : null;
     }
 
-    function getFloorColorIndex(roomName) {
-      const floor = getFloorNumber(roomName);
-      if (floor === null) return null;
-      return (floor - 1) % 6;
+    // 將帶有索引的房間陣列依樓層分組，回傳依樓層數字排序、「其他」放最後的分組陣列
+    function groupRoomsByFloor(itemsWithIdx) {
+      const groups = new Map();
+      itemsWithIdx.forEach(item => {
+        const floor = getFloorNumber(item.room.name);
+        const key = floor !== null ? String(floor) : 'other';
+        if (!groups.has(key)) {
+          groups.set(key, { key, floor, colorIdx: floor !== null ? (floor - 1) % 6 : null, items: [] });
+        }
+        groups.get(key).items.push(item);
+      });
+      return Array.from(groups.values()).sort((a, b) => {
+        if (a.key === 'other') return 1;
+        if (b.key === 'other') return -1;
+        return a.floor - b.floor;
+      });
     }
 
-    function renderFloorLegend(containerId, rooms) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      const floors = new Set();
-      rooms.forEach(r => {
-        const f = getFloorNumber(r.name);
-        if (f !== null) floors.add(f);
+    // 展開/收合某個樓層分組：直接切換該分組所有列的顯示狀態，不重新渲染整個表格
+    function toggleFloorGroup(key, iconEl) {
+      const nowCollapsed = !collapsedFloorGroups.has(key);
+      if (nowCollapsed) collapsedFloorGroups.add(key);
+      else collapsedFloorGroups.delete(key);
+      document.querySelectorAll(`#adminTableBody tr[data-group="${key}"]`).forEach(tr => {
+        tr.style.display = nowCollapsed ? 'none' : '';
       });
-      if (floors.size === 0) {
-        container.style.display = 'none';
-        return;
-      }
-      const sorted = Array.from(floors).sort((a, b) => a - b);
-      container.innerHTML = sorted.map(f => {
-        const idx = (f - 1) % 6;
-        return `<div class="floor-legend-item"><span class="floor-legend-swatch" style="background:var(--floor-${idx}-bg)"></span>${f} 樓</div>`;
-      }).join('');
-      container.style.display = 'flex';
+      if (iconEl) iconEl.textContent = nowCollapsed ? '▶' : '▼';
     }
 
     function showStatus(text, isError = false) {
@@ -493,30 +497,45 @@
     function renderAdminTable() {
       const body = document.getElementById('adminTableBody');
       body.innerHTML = '';
-      workingRooms.forEach((room, i) => {
-        const isExisting = !!(room.id && String(room.id).trim());
-        const locked = isExisting && !unlockedPrevIndices.has(i);
-        const prevLockAttrs = locked ? 'readonly class="locked-input"' : '';
-        const unlockBtn = locked
-          ? `<button type="button" class="btn-unlock" onclick="unlockRoomPrev(${i})" title="解鎖手動編輯">🔓 可編輯</button>`
-          : '';
-        const colorIdx = getFloorColorIndex(room.name);
-        const tr = document.createElement('tr');
-        if (colorIdx !== null) tr.className = `floor-${colorIdx}`;
-        tr.innerHTML = `
-          <td><input type="text" id="roomName_${i}" value="${escapeHtml(room.name)}" placeholder="例如: 101"></td>
-          <td>
-            <div class="input-with-btn">
-              <input type="number" id="roomPrev_${i}" value="${room.previous}" ${prevLockAttrs}>
-              ${unlockBtn}
-            </div>
-          </td>
-          <td><input type="number" id="roomCurr_${i}" value="${room.current}"></td>
-          <td><button type="button" class="btn-delete-room" onclick="deleteRoom(${i})">🗑 刪除</button></td>
-        `;
-        body.appendChild(tr);
+      const itemsWithIdx = workingRooms.map((room, idx) => ({ room, idx }));
+      const groups = groupRoomsByFloor(itemsWithIdx);
+
+      groups.forEach(g => {
+        const collapsed = collapsedFloorGroups.has(g.key);
+        const colorClass = g.colorIdx !== null ? `floor-${g.colorIdx}` : 'floor-none';
+        const label = g.key === 'other' ? '其他' : `${g.floor} 樓`;
+
+        const headerTr = document.createElement('tr');
+        headerTr.className = `floor-group-header ${colorClass}`.trim();
+        headerTr.setAttribute('onclick', `toggleFloorGroup('${g.key}', this.querySelector('.floor-toggle-icon'))`);
+        headerTr.innerHTML = `<td colspan="4"><span class="floor-toggle-icon">${collapsed ? '▶' : '▼'}</span> <strong>${label}</strong>　(${g.items.length} 間)</td>`;
+        body.appendChild(headerTr);
+
+        g.items.forEach(({ room, idx: i }) => {
+          const isExisting = !!(room.id && String(room.id).trim());
+          const locked = isExisting && !unlockedPrevIndices.has(i);
+          const prevLockAttrs = locked ? 'readonly class="locked-input"' : '';
+          const unlockBtn = locked
+            ? `<button type="button" class="btn-unlock" onclick="unlockRoomPrev(${i})" title="解鎖手動編輯">🔓 可編輯</button>`
+            : '';
+          const tr = document.createElement('tr');
+          tr.className = colorClass;
+          tr.dataset.group = g.key;
+          if (collapsed) tr.style.display = 'none';
+          tr.innerHTML = `
+            <td><input type="text" id="roomName_${i}" value="${escapeHtml(room.name)}" placeholder="例如: 101"></td>
+            <td>
+              <div class="input-with-btn">
+                <input type="number" id="roomPrev_${i}" value="${room.previous}" ${prevLockAttrs}>
+                ${unlockBtn}
+              </div>
+            </td>
+            <td><input type="number" id="roomCurr_${i}" value="${room.current}"></td>
+            <td><button type="button" class="btn-delete-room" onclick="deleteRoom(${i})">🗑 刪除</button></td>
+          `;
+          body.appendChild(tr);
+        });
       });
-      renderFloorLegend('floorLegend', workingRooms);
     }
 
     // 把目前輸入框裡的值，同步寫回 workingRooms 陣列，避免新增/刪除列時遺失尚未儲存的編輯內容
@@ -569,6 +588,7 @@
     function addRoom() {
       syncInputsToWorkingRooms();
       workingRooms.push({ id: '', name: '新房號', previous: 0, current: 0 });
+      collapsedFloorGroups.delete('other'); // 確保新房號所在的分組是展開的，才能自動聚焦
       renderAdminTable();
       // 讓新增的那一列自動聚焦，方便直接輸入房號
       const idx = workingRooms.length - 1;
