@@ -16,10 +16,12 @@
   <!-- 前台展示 -->
   <div class="card">
     <h2>⚡ 前台 - 電費用量統計</h2>
+    <p id="meterDateLine" class="field-note" style="display:none;">📅 抄表日期：<span id="displayMeterDate"></span></p>
     <h3>總電表概況 (單價：<span id="displayUnitPrice">0</span> 元/度)</h3>
     <div class="grid">
       <div class="stat-box"><div>總使用度數</div><div class="stat-value"><span id="mainUsage">0</span> 度</div></div>
       <div class="stat-box"><div>總電費金額</div><div class="stat-value">$ <span id="mainAmount">0</span></div></div>
+      <div class="stat-box"><div>水費均攤費用（每人）</div><div class="stat-value">$ <span id="waterPerPerson">0</span></div></div>
     </div>
 
     <h3>各套房用量明細</h3>
@@ -96,6 +98,15 @@
       document.getElementById('displayUnitPrice').innerText = data.unitPrice;
       document.getElementById('mainUsage').innerText = mainUsage >= 0 ? mainUsage : 0;
       document.getElementById('mainAmount').innerText = (mainUsage * data.unitPrice).toFixed(0);
+
+      if (data.meterReadingDate) {
+        document.getElementById('displayMeterDate').innerText = data.meterReadingDate;
+        document.getElementById('meterDateLine').style.display = 'block';
+      }
+
+      const water = data.water || { totalAmount: 0, peopleCount: 1 };
+      const waterPerPerson = water.peopleCount > 0 ? water.totalAmount / water.peopleCount : 0;
+      document.getElementById('waterPerPerson').innerText = waterPerPerson.toFixed(0);
 
       const tenantBody = document.getElementById('tenantTableBody');
       tenantBody.innerHTML = '';

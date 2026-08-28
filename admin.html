@@ -56,15 +56,34 @@
 
     <form id="meterForm" onsubmit="return false;">
       <p>
+        <label><strong>抄表日期：</strong></label>
+        <input type="date" id="inputMeterDate">
+      </p>
+
+      <p>
         <label><strong>台電標準單價 (元/度)：</strong></label>
         <input type="number" step="0.1" id="inputUnitPrice" required>
       </p>
 
       <h3>總電表讀數</h3>
       <div class="grid">
-        <div><label>上次度數：</label><input type="number" id="mainPrev" required></div>
+        <div>
+          <label>上次度數：</label>
+          <div class="input-with-btn">
+            <input type="number" id="mainPrev" class="locked-input" readonly required>
+            <button type="button" class="btn-unlock" id="mainPrevUnlockBtn" onclick="unlockMainPrev()" title="解鎖手動編輯">🔓 可編輯</button>
+          </div>
+        </div>
         <div><label>本次度數：</label><input type="number" id="mainCurr" required></div>
       </div>
+      <p class="field-note">上次度數會自動沿用上次儲存的本次度數，不可手動修改；如需更正，請按「🔓 可編輯」解鎖。</p>
+
+      <h3>💧 水費分攤設定</h3>
+      <div class="grid">
+        <div><label>水費總金額：</label><input type="number" step="1" id="inputWaterTotal" placeholder="例如: 1200"></div>
+        <div><label>分攤人數：</label><input type="number" step="1" min="1" id="inputWaterPeople" placeholder="例如: 6"></div>
+      </div>
+      <p class="field-note">前台會顯示「水費均攤費用」= 水費總金額 ÷ 分攤人數（每人應繳金額：<strong><span id="waterPerPersonPreview">0</span> 元</strong>）。</p>
 
       <h3>各分電表讀數</h3>
       <table>
@@ -125,6 +144,7 @@
     let workingRooms = [];        // 目前後台表格中，可新增/刪除的房號工作陣列
     let fileSha = "";             // GitHub 修改檔案時必須帶上的 SHA 驗證碼
     let currentPasswordHash = null; // 目前有效的密碼雜湊值（來自 data.json）
+    let unlockedPrevIndices = new Set(); // 目前已被手動解鎖「上次度數」的房號索引
 
     // ---------- 登入 / 登出 ----------
     function isAdminSession() {
@@ -196,6 +216,9 @@
       // 初始化：載入本地紀錄的 Token
       document.getElementById('cfgToken').value = localStorage.getItem('gh_token') || '';
       updateTokenStatusIndicator();
+
+      document.getElementById('inputWaterTotal').addEventListener('input', updateWaterPreview);
+      document.getElementById('inputWaterPeople').addEventListener('input', updateWaterPreview);
 
       await fetchPublicPasswordHash();
 
@@ -362,6 +385,8 @@
         currentData = JSON.parse(jsonText);
         workingRooms = JSON.parse(JSON.stringify(currentData.rooms || []));
         if (currentData.adminPasswordHash) currentPasswordHash = currentData.adminPasswordHash;
+        unlockedPrevIndices = new Set();
+        lockMainPrev();
 
         renderAdminUI();
         showStatus("資料已順利從 GitHub 載入！");
@@ -373,20 +398,44 @@
     // ---------- 渲染後台表單 ----------
     function renderAdminUI() {
       if (!currentData) return;
+      document.getElementById('inputMeterDate').value = currentData.meterReadingDate || '';
       document.getElementById('inputUnitPrice').value = currentData.unitPrice;
       document.getElementById('mainPrev').value = currentData.mainMeter.previous;
       document.getElementById('mainCurr').value = currentData.mainMeter.current;
+      const water = currentData.water || { totalAmount: 0, peopleCount: 1 };
+      document.getElementById('inputWaterTotal').value = water.totalAmount;
+      document.getElementById('inputWaterPeople').value = water.peopleCount;
+      updateWaterPreview();
       renderAdminTable();
+    }
+
+    // 即時預覽「水費均攤費用」= 水費總金額 ÷ 分攤人數
+    function updateWaterPreview() {
+      const total = parseFloat(document.getElementById('inputWaterTotal').value) || 0;
+      const people = parseFloat(document.getElementById('inputWaterPeople').value) || 0;
+      const perPerson = people > 0 ? total / people : 0;
+      document.getElementById('waterPerPersonPreview').innerText = perPerson.toFixed(0);
     }
 
     function renderAdminTable() {
       const body = document.getElementById('adminTableBody');
       body.innerHTML = '';
       workingRooms.forEach((room, i) => {
+        const isExisting = !!(room.id && String(room.id).trim());
+        const locked = isExisting && !unlockedPrevIndices.has(i);
+        const prevLockAttrs = locked ? 'readonly class="locked-input"' : '';
+        const unlockBtn = locked
+          ? `<button type="button" class="btn-unlock" onclick="unlockRoomPrev(${i})" title="解鎖手動編輯">🔓 可編輯</button>`
+          : '';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><input type="text" id="roomName_${i}" value="${escapeHtml(room.name)}" placeholder="例如: 101"></td>
-          <td><input type="number" id="roomPrev_${i}" value="${room.previous}"></td>
+          <td>
+            <div class="input-with-btn">
+              <input type="number" id="roomPrev_${i}" value="${room.previous}" ${prevLockAttrs}>
+              ${unlockBtn}
+            </div>
+          </td>
           <td><input type="number" id="roomCurr_${i}" value="${room.current}"></td>
           <td><button type="button" class="btn-delete-room" onclick="deleteRoom(${i})">🗑 刪除</button></td>
         `;
@@ -404,6 +453,41 @@
         if (prevEl) room.previous = parseFloat(prevEl.value) || 0;
         if (currEl) room.current = parseFloat(currEl.value) || 0;
       });
+    }
+
+    // ---------- 解鎖/鎖回「上次度數」欄位，允許手動更正 ----------
+    function unlockMainPrev() {
+      const el = document.getElementById('mainPrev');
+      el.readOnly = false;
+      el.classList.remove('locked-input');
+      el.focus();
+      el.select();
+      const btn = document.getElementById('mainPrevUnlockBtn');
+      if (btn) btn.remove();
+    }
+
+    function lockMainPrev() {
+      const el = document.getElementById('mainPrev');
+      if (!el) return;
+      el.readOnly = true;
+      el.classList.add('locked-input');
+      if (!document.getElementById('mainPrevUnlockBtn')) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'mainPrevUnlockBtn';
+        btn.className = 'btn-unlock';
+        btn.title = '解鎖手動編輯';
+        btn.textContent = '🔓 可編輯';
+        btn.onclick = unlockMainPrev;
+        el.parentElement.appendChild(btn);
+      }
+    }
+
+    function unlockRoomPrev(idx) {
+      unlockedPrevIndices.add(idx);
+      renderAdminTable();
+      const el = document.getElementById(`roomPrev_${idx}`);
+      if (el) { el.focus(); el.select(); }
     }
 
     function addRoom() {
@@ -425,6 +509,13 @@
       const roomName = workingRooms[idx].name || '此房號';
       if (!confirm(`確定要刪除「${roomName}」嗎？此操作在按下「儲存並 Commit」前都還可以復原（重新載入資料即可）。`)) return;
       workingRooms.splice(idx, 1);
+      // 刪除列後，其後房號的索引會往前移一位，同步調整已解鎖記錄
+      const shifted = new Set();
+      unlockedPrevIndices.forEach(i => {
+        if (i < idx) shifted.add(i);
+        else if (i > idx) shifted.add(i - 1);
+      });
+      unlockedPrevIndices = shifted;
       renderAdminTable();
     }
 
@@ -454,12 +545,23 @@
         return;
       }
 
+      const waterPeople = parseInt(document.getElementById('inputWaterPeople').value, 10) || 0;
+      if (waterPeople < 1) {
+        showStatus("水費分攤人數至少要 1 人，請確認「分攤人數」欄位。", true);
+        return;
+      }
+
       const updatedData = {
         adminPasswordHash: (currentData && currentData.adminPasswordHash) || currentPasswordHash || DEFAULT_ADMIN_PASSWORD_HASH,
+        meterReadingDate: document.getElementById('inputMeterDate').value || '',
         unitPrice: parseFloat(document.getElementById('inputUnitPrice').value) || 0,
         mainMeter: {
           previous: parseFloat(document.getElementById('mainPrev').value) || 0,
           current: parseFloat(document.getElementById('mainCurr').value) || 0
+        },
+        water: {
+          totalAmount: parseFloat(document.getElementById('inputWaterTotal').value) || 0,
+          peopleCount: waterPeople
         },
         rooms: workingRooms.map(r => ({
           id: r.name,
@@ -500,6 +602,8 @@
         fileSha = resData.content.sha;
         currentData = updatedData;
         workingRooms = JSON.parse(JSON.stringify(currentData.rooms));
+        unlockedPrevIndices = new Set();
+        lockMainPrev();
         renderAdminUI();
         showStatus("✅ 成功更新至 GitHub！前台數據已同步。");
       } catch (err) {

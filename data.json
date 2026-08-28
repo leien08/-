@@ -1,7 +1,9 @@
 {
   "adminPasswordHash": "366296cfdac556b843dd9e1c759fcc1cf689ad9254f5b624a88ced8e3764bdb7",
+  "meterReadingDate": "",
   "unitPrice": 5.0,
   "mainMeter": { "previous": 10000, "current": 11200 },
+  "water": { "totalAmount": 0, "peopleCount": 1 },
   "rooms": [
     { "id": "101", "name": "101 房", "previous": 1000, "current": 1150 },
     { "id": "102", "name": "102 房", "previous": 1500, "current": 1720 },
