@@ -16,7 +16,10 @@
   <!-- 前台展示 -->
   <div class="card">
     <h2>⚡ 前台 - 電費用量統計</h2>
-    <p id="meterDateLine" class="field-note" style="display:none;">📅 抄表日期：<span id="displayMeterDate"></span></p>
+    <div class="meter-dates">
+      <span id="meterDateLine" class="date-item" style="display:none;">📅 電費抄表日期：<span id="displayMeterDate"></span></span>
+      <span id="waterDateLine" class="date-item" style="display:none;">💧 水費抄表日期：<span id="displayWaterDate"></span></span>
+    </div>
     <h3>總電表概況 (單價：<span id="displayUnitPrice">0</span> 元/度)</h3>
     <div class="grid">
       <div class="stat-box"><div>總使用度數</div><div class="stat-value"><span id="mainUsage">0</span> 度</div></div>
@@ -70,6 +73,14 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // 依房號前綴（例如 "1-1" -> 第1組）判斷分組，回傳 1 / 2 / 3，其餘回傳 null
+    function roomGroupOf(nameOrId) {
+      const match = String(nameOrId || '').match(/^(\d+)-\d+/);
+      if (!match) return null;
+      const g = parseInt(match[1], 10);
+      return (g >= 1 && g <= 3) ? g : null;
+    }
+
     async function loadPublicData() {
       // 若這台裝置曾經在 admin.html 登入過並設定過連線資訊，沿用該設定；否則使用預設值。
       const owner = localStorage.getItem('gh_owner') || DEFAULT_OWNER;
@@ -101,7 +112,11 @@
 
       if (data.meterReadingDate) {
         document.getElementById('displayMeterDate').innerText = data.meterReadingDate;
-        document.getElementById('meterDateLine').style.display = 'block';
+        document.getElementById('meterDateLine').style.display = 'inline';
+      }
+      if (data.waterReadingDate) {
+        document.getElementById('displayWaterDate').innerText = data.waterReadingDate;
+        document.getElementById('waterDateLine').style.display = 'inline';
       }
 
       const water = data.water || { totalAmount: 0, peopleCount: 1 };
@@ -113,9 +128,12 @@
       data.rooms.forEach(room => {
         const usage = room.current - room.previous;
         const amount = usage * data.unitPrice;
+        const group = roomGroupOf(room.id || room.name);
+        const rowClass = group ? `group-${group}` : '';
+        const badgeClass = group ? `group-${group}` : 'group-none';
         tenantBody.innerHTML += `
-          <tr>
-            <td>${escapeHtml(room.name)}</td>
+          <tr class="${rowClass}">
+            <td><span class="room-badge ${badgeClass}">${escapeHtml(room.name)}</span></td>
             <td>${room.previous}</td>
             <td>${room.current}</td>
             <td>${usage >= 0 ? usage : 0} 度</td>

@@ -1,90 +1,206 @@
+:root {
+  --bg-page: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-stat: #e9ecef;
+  --text-primary: #333333;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --accent: #007bff;
+  --accent-hover: #0069d9;
+  --accent-contrast: #ffffff;
+
+  --success-bg: #d4edda;
+  --success-text: #155724;
+  --error-bg: #f8d7da;
+  --error-text: #721c24;
+
+  --config-bg: #fff3cd;
+  --config-border: #ffeeba;
+  --security-bg: #e7f1ff;
+  --security-border: #b6d4fe;
+
+  --locked-bg: #e9ecef;
+  --locked-text: #6c757d;
+
+  --btn-unlock-bg: #ffc107;
+  --btn-unlock-hover: #e0a800;
+  --btn-save-bg: #28a745;
+  --btn-save-hover: #218838;
+  --btn-disabled-bg: #6c757d;
+  --btn-delete-bg: #dc3545;
+  --btn-delete-hover: #bb2d3b;
+  --btn-add-bg: #17a2b8;
+  --btn-add-hover: #117a8b;
+  --btn-cancel-bg: #6c757d;
+  --btn-cancel-hover: #565e64;
+
+  --modal-overlay: rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+  /* 房號分組色彩：第1組/第2組/第3組（淺色主題） */
+  --group1-bg: #EEEDFE; --group1-border: #AFA9EC; --group1-text: #3C3489;
+  --group2-bg: #E1F5EE; --group2-border: #5DCAA5; --group2-text: #085041;
+  --group3-bg: #FAECE7; --group3-border: #F0997B; --group3-text: #712B13;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #16181c;
+    --bg-card: #202329;
+    --bg-stat: #262a31;
+    --text-primary: #e8e9ea;
+    --text-secondary: #a2a7ae;
+    --border-color: #3a3e45;
+    --accent: #4dabf7;
+    --accent-hover: #74c0fc;
+    --accent-contrast: #0b1a2b;
+
+    --success-bg: #143523;
+    --success-text: #8fd9ab;
+    --error-bg: #3a1f21;
+    --error-text: #f1a5ac;
+
+    --config-bg: #3a3220;
+    --config-border: #5c4f2c;
+    --security-bg: #1c2b3d;
+    --security-border: #2f4a68;
+
+    --locked-bg: #2a2d33;
+    --locked-text: #9a9ea5;
+
+    --btn-unlock-bg: #a5790f;
+    --btn-unlock-hover: #c28f16;
+    --btn-save-bg: #1f8a3c;
+    --btn-save-hover: #26a34a;
+    --btn-disabled-bg: #4a4e55;
+    --btn-delete-bg: #a5333f;
+    --btn-delete-hover: #c03e4c;
+    --btn-add-bg: #14808f;
+    --btn-add-hover: #1a99ab;
+    --btn-cancel-bg: #4a4e55;
+    --btn-cancel-hover: #5b5f67;
+
+    --modal-overlay: rgba(0, 0, 0, 0.6);
+    --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+    /* 房號分組色彩（深色主題，反轉明暗） */
+    --group1-bg: #3C3489; --group1-border: #7F77DD; --group1-text: #CECBF6;
+    --group2-bg: #085041; --group2-border: #1D9E75; --group2-text: #9FE1CB;
+    --group3-bg: #712B13; --group3-border: #D85A30; --group3-text: #F5C4B3;
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   max-width: 800px;
   margin: 20px auto;
   padding: 0 15px;
-  background: #f8f9fa;
+  background: var(--bg-page);
+  color: var(--text-primary);
 }
 
 .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.top-bar h1 { font-size: 1.3em; color: #333; margin: 0; }
+.top-bar h1 { font-size: 1.3em; color: var(--text-primary); margin: 0; }
 
-.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-h2 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 8px; }
+.card { background: var(--bg-card); padding: 20px; border-radius: 8px; box-shadow: var(--shadow-card); margin-bottom: 20px; }
+h2 { margin-top: 0; color: var(--text-primary); border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+h3 { color: var(--text-primary); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-.stat-box { background: #e9ecef; padding: 15px; border-radius: 6px; text-align: center; }
-.stat-value { font-size: 1.5em; font-weight: bold; color: #007bff; }
+.stat-box { background: var(--bg-stat); padding: 15px; border-radius: 6px; text-align: center; color: var(--text-primary); }
+.stat-value { font-size: 1.5em; font-weight: bold; color: var(--accent); }
 
 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-th, td { border: 1px solid #dee2e6; padding: 10px; text-align: center; }
-th { background-color: #007bff; color: white; }
+th, td { border: 1px solid var(--border-color); padding: 10px; text-align: center; color: var(--text-primary); }
+th { background-color: var(--accent); color: var(--accent-contrast); }
 
-input[type="number"], input[type="text"], input[type="password"] { width: 95%; padding: 6px; box-sizing: border-box; }
+input[type="number"], input[type="text"], input[type="password"], input[type="date"] {
+  width: 95%; padding: 6px; box-sizing: border-box;
+  background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;
+}
 
 .locked-input {
-  background: #e9ecef;
-  color: #6c757d;
+  background: var(--locked-bg);
+  color: var(--locked-text);
   cursor: not-allowed;
 }
 
 .input-with-btn { display: flex; align-items: center; gap: 6px; }
 .input-with-btn input { flex: 1; }
 .btn-unlock {
-  background: #ffc107; color: #333; padding: 6px 10px; font-size: 0.8em;
+  background: var(--btn-unlock-bg); color: #333; padding: 6px 10px; font-size: 0.8em;
   white-space: nowrap; flex: none;
 }
-.btn-unlock:hover { background: #e0a800; }
+.btn-unlock:hover { background: var(--btn-unlock-hover); }
 
-button { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 1em; }
-button:hover { background: #218838; }
-button:disabled { background: #6c757d; cursor: not-allowed; }
+button { background: var(--btn-save-bg); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 1em; }
+button:hover { background: var(--btn-save-hover); }
+button:disabled { background: var(--btn-disabled-bg); cursor: not-allowed; }
 
 .btn-link {
-  display: inline-block; background: transparent; color: #007bff; border: 1px solid #007bff;
+  display: inline-block; background: transparent; color: var(--accent); border: 1px solid var(--accent);
   padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.9em;
 }
-.btn-link:hover { background: #007bff; color: white; }
+.btn-link:hover { background: var(--accent); color: var(--accent-contrast); }
 
 .status-msg { margin-top: 10px; font-weight: bold; padding: 10px; border-radius: 4px; display: none; }
-.success { background: #d4edda; color: #155724; }
-.error { background: #f8d7da; color: #721c24; }
+.success { background: var(--success-bg); color: var(--success-text); }
+.error { background: var(--error-bg); color: var(--error-text); }
 
-.config-sec { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
-.security-sec { background: #e7f1ff; border: 1px solid #b6d4fe; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+.config-sec { background: var(--config-bg); border: 1px solid var(--config-border); padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+.security-sec { background: var(--security-bg); border: 1px solid var(--security-border); padding: 15px; border-radius: 6px; margin-bottom: 15px; }
 
 .inline-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .inline-actions button { flex: none; }
-.field-note { font-size: 0.8em; color: #6c757d; margin: 6px 0 0; }
+.field-note { font-size: 0.8em; color: var(--text-secondary); margin: 6px 0 0; }
 
 /* 房號管理（可新增/刪除列） */
 .btn-delete-room {
-  background: #dc3545; padding: 6px 12px; font-size: 0.85em; white-space: nowrap;
+  background: var(--btn-delete-bg); padding: 6px 12px; font-size: 0.85em; white-space: nowrap;
 }
-.btn-delete-room:hover { background: #bb2d3b; }
+.btn-delete-room:hover { background: var(--btn-delete-hover); }
 .btn-add-room {
-  background: #17a2b8; margin-top: 10px; font-size: 0.9em;
+  background: var(--btn-add-bg); margin-top: 10px; font-size: 0.9em;
 }
-.btn-add-room:hover { background: #117a8b; }
+.btn-add-room:hover { background: var(--btn-add-hover); }
 
 /* 登入彈窗（admin.html 用） */
 .modal-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: none; position: fixed; inset: 0; background: var(--modal-overlay);
   align-items: center; justify-content: center; z-index: 100;
 }
 .modal-overlay.show { display: flex; }
 .modal-box {
-  background: white; padding: 24px; border-radius: 8px; width: 90%; max-width: 320px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  background: var(--bg-card); padding: 24px; border-radius: 8px; width: 90%; max-width: 320px;
+  box-shadow: var(--shadow-modal);
 }
 .modal-box h3 { margin-top: 0; }
 .modal-box input[type="password"] { margin-bottom: 12px; }
 .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
 .modal-actions button { flex: 1; }
-.btn-cancel { background: #6c757d; }
-.btn-cancel:hover { background: #565e64; }
-.modal-error { color: #721c24; font-size: 0.9em; margin: -6px 0 10px; display: none; }
+.btn-cancel { background: var(--btn-cancel-bg); }
+.btn-cancel:hover { background: var(--btn-cancel-hover); }
+.modal-error { color: var(--error-text); font-size: 0.9em; margin: -6px 0 10px; display: none; }
 
 .locked-state {
-  text-align: center; padding: 50px 20px; color: #6c757d;
+  text-align: center; padding: 50px 20px; color: var(--text-secondary);
 }
+
+/* 房號分組色彩徽章：1-1~1-10 / 2-1~2-10 / 3-1~3-10 */
+.room-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.9em; font-weight: bold;
+  border: 1px solid transparent;
+}
+.room-badge.group-1 { background: var(--group1-bg); color: var(--group1-text); border-color: var(--group1-border); }
+.room-badge.group-2 { background: var(--group2-bg); color: var(--group2-text); border-color: var(--group2-border); }
+.room-badge.group-3 { background: var(--group3-bg); color: var(--group3-text); border-color: var(--group3-border); }
+.room-badge.group-none { background: var(--bg-stat); color: var(--text-secondary); border-color: var(--border-color); }
+
+tr.group-1 { background: color-mix(in srgb, var(--group1-bg) 45%, var(--bg-card)); }
+tr.group-2 { background: color-mix(in srgb, var(--group2-bg) 45%, var(--bg-card)); }
+tr.group-3 { background: color-mix(in srgb, var(--group3-bg) 45%, var(--bg-card)); }
+
+.meter-dates { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 10px; }
+.meter-dates span.date-item { font-size: 0.9em; color: var(--text-secondary); }

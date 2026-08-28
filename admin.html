@@ -56,7 +56,7 @@
 
     <form id="meterForm" onsubmit="return false;">
       <p>
-        <label><strong>抄表日期：</strong></label>
+        <label><strong>電費抄表日期：</strong></label>
         <input type="date" id="inputMeterDate">
       </p>
 
@@ -80,6 +80,7 @@
 
       <h3>💧 水費分攤設定</h3>
       <div class="grid">
+        <div><label>水費抄表日期：</label><input type="date" id="inputWaterDate"></div>
         <div><label>水費總金額：</label><input type="number" step="1" id="inputWaterTotal" placeholder="例如: 1200"></div>
         <div><label>分攤人數：</label><input type="number" step="1" min="1" id="inputWaterPeople" placeholder="例如: 6"></div>
       </div>
@@ -251,6 +252,14 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // 依房號前綴（例如 "1-1" -> 第1組）判斷分組，回傳 1 / 2 / 3，其餘回傳 null
+    function roomGroupOf(nameOrId) {
+      const match = String(nameOrId || '').match(/^(\d+)-\d+/);
+      if (!match) return null;
+      const g = parseInt(match[1], 10);
+      return (g >= 1 && g <= 3) ? g : null;
+    }
+
     function showStatus(text, isError = false) {
       showMsgIn('statusMsg', text, isError);
     }
@@ -399,6 +408,7 @@
     function renderAdminUI() {
       if (!currentData) return;
       document.getElementById('inputMeterDate').value = currentData.meterReadingDate || '';
+      document.getElementById('inputWaterDate').value = currentData.waterReadingDate || '';
       document.getElementById('inputUnitPrice').value = currentData.unitPrice;
       document.getElementById('mainPrev').value = currentData.mainMeter.previous;
       document.getElementById('mainCurr').value = currentData.mainMeter.current;
@@ -427,7 +437,9 @@
         const unlockBtn = locked
           ? `<button type="button" class="btn-unlock" onclick="unlockRoomPrev(${i})" title="解鎖手動編輯">🔓 可編輯</button>`
           : '';
+        const group = roomGroupOf(room.name);
         const tr = document.createElement('tr');
+        if (group) tr.className = `group-${group}`;
         tr.innerHTML = `
           <td><input type="text" id="roomName_${i}" value="${escapeHtml(room.name)}" placeholder="例如: 101"></td>
           <td>
@@ -554,6 +566,7 @@
       const updatedData = {
         adminPasswordHash: (currentData && currentData.adminPasswordHash) || currentPasswordHash || DEFAULT_ADMIN_PASSWORD_HASH,
         meterReadingDate: document.getElementById('inputMeterDate').value || '',
+        waterReadingDate: document.getElementById('inputWaterDate').value || '',
         unitPrice: parseFloat(document.getElementById('inputUnitPrice').value) || 0,
         mainMeter: {
           previous: parseFloat(document.getElementById('mainPrev').value) || 0,
